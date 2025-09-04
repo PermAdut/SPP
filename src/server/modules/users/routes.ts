@@ -1,0 +1,52 @@
+import { Router } from 'express'
+import controller from './controller'
+import validateMiddleware from '../../middlewares/validate.middleware'
+import { body, param } from 'express-validator'
+import upload from '../../utils/multer'
+
+const router = Router()
+
+router.route('/all').get(controller.getAll)
+router
+  .route('/file/:id')
+  .patch(
+    [param('id').isInt({ min: 0 }).withMessage('Id must be positive').toInt()],
+    validateMiddleware,
+    upload.single('file'),
+    controller.uploadFile,
+  )
+router
+  .route('/desc/:id')
+  .patch(
+    [
+      param('id').isInt({ min: 0 }).withMessage('Id must be positive').toInt(),
+      body('additionalData').isString().withMessage('Additional data must be string'),
+    ],
+    validateMiddleware,
+    controller.changeDesc,
+  )
+router
+  .route('/adm/:id')
+  .patch(
+    [
+      param('id').isInt({ min: 0 }).withMessage('Id must be positive').toInt(),
+      body('isAdmin').isBoolean().withMessage('isAdmin must be boolean'),
+    ],
+    validateMiddleware,
+    controller.changeAdm,
+  )
+router
+  .route('/filerName')
+  .get(
+    [body('name').isString().withMessage('Filter name must be string')],
+    validateMiddleware,
+    controller.filterName,
+  )
+router
+  .route('/filerSurname')
+  .get(
+    [body('name').isString().withMessage('Filter surname must be string')],
+    validateMiddleware,
+    controller.filterSurname,
+  )
+export default router
