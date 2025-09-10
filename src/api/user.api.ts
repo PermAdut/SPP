@@ -1,3 +1,5 @@
+import axios, { AxiosInstance } from "axios";
+
 export interface IUser {
   id: number;
   name: string;
@@ -8,88 +10,45 @@ export interface IUser {
 }
 
 class UserApi {
-  private users: IUser[] = [];
-
+  private axiosInstance: AxiosInstance = axios.create({ baseURL: "" });
   constructor() {
-    this.users = [
-      {
-        id: 0,
-        name: "John",
-        surname: "Doe",
-        isAdmin: true,
-        photo: ["extra.svg", "logo.svg"],
-        additionalData: "Software Engineer",
-      },
-      {
-        id: 1,
-        name: "Jane",
-        surname: "Smith",
-        isAdmin: false,
-        photo: ["spring-boot.svg"],
-        additionalData: undefined,
-      },
-      {
-        id: 2,
-        name: "Alice",
-        surname: "Johnson",
-        isAdmin: false,
-        photo: ["spring-cloud.svg", "spring.svg"],
-        additionalData: "Data Scientist",
-      },
-      {
-        id: 3,
-        name: "Bob",
-        surname: "Williams",
-        isAdmin: true,
-        photo: ["extra.svg"],
-        additionalData: "Product Manager",
-      },
-      {
-        id: 4,
-        name: "Emma",
-        surname: "Davis",
-        isAdmin: false,
-        photo: ["logo.svg", "spring.svg"],
-        additionalData: undefined,
-      },
-    ];
+    this.axiosInstance.interceptors.response.use(
+      (res) => res,
+      (err) => {
+        console.error(err);
+        throw new err();
+      }
+    );
   }
 
   async getAll(): Promise<IUser[]> {
-    return [...this.users];
+    const response = await this.axiosInstance.get("/all");
+    return response.data;
   }
 
   async changeAdminStatus(id: number, status: boolean): Promise<IUser[]> {
-    this.users = this.users.map((user) =>
-      user.id === id ? { ...user, isAdmin: status } : user
-    );
-    return [...this.users];
+    const response = await this.axiosInstance.patch(`/adm/${id}`, {status: status})
+    return response.data;
   }
 
   async filterByName(name: string): Promise<IUser[]> {
-    return this.users.filter((user) =>
-      user.name.toLowerCase().includes(name.toLowerCase())
-    );
+    const response = await this.axiosInstance.post(`/filterName`, {name: name})
+    return response.data;
   }
 
   async filterBySurName(surname: string): Promise<IUser[]> {
-    return this.users.filter((user) =>
-      user.surname.toLowerCase().includes(surname.toLowerCase())
-    );
+    const response = await this.axiosInstance.post(`/filterSurname`, {surname: surname})
+    return response.data;
   }
 
   async uploadPhoto(id: number, photo: string): Promise<IUser[]> {
-    this.users = this.users.map((user) =>
-      user.id === id ? { ...user, photo: [...user.photo, photo] } : user
-    );
-    return [...this.users];
+    const response = await this.axiosInstance.patch(`/file/${id}`)
+    return response.data;
   }
 
   async changeAdditionalData(id: number, data: string): Promise<IUser[]> {
-    this.users = this.users.map((user) =>
-      user.id === id ? { ...user, additionalData: data } : user
-    );
-    return [...this.users];
+    const response = await this.axiosInstance.patch(`/desc/${id}`, {additionalData: data})
+    return response.data;
   }
 }
 const userApiInstance = new UserApi();

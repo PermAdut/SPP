@@ -1,4 +1,4 @@
-import { IUser } from '../modules/users/user.intreface'
+import { IUser } from '../modules/users/user.intreface.js'
 
 const testUsers: IUser[] = [
   {
@@ -44,40 +44,43 @@ const testUsers: IUser[] = [
 ]
 
 class UserDatabase {
-  private users: IUser[] = []
-
-  constructor() {
-    this.users = testUsers
-  }
-
+  private users: IUser[] = [...testUsers]
   getAll() {
     return this.users
   }
 
-  changeAdminStatus(id: number, status: boolean) {
-    this.users[id].isAdmin = status
+  changeAdminStatus(id: number, status: boolean):IUser[] {
+    this.users = this.users.map((user) =>
+      user.id === id ? { ...user, isAdmin: status } : user
+    );
+
+    return [...this.users];
   }
 
   filterByName(name: string): IUser[] {
-    return this.users.filter((el) => {
-      if (el.name.includes(name)) return el
-    })
+    return this.users.filter((user) =>
+      user.name.toLowerCase().includes(name.toLowerCase())
+    );
   }
 
-  filterBySurName(surName: string): IUser[] {
-    return this.users.filter((el) => {
-      if (el.surname.includes(surName)) return el
-    })
+  filterBySurName(surname: string): IUser[] {
+    return this.users.filter((user) =>
+      user.surname.toLowerCase().includes(surname.toLowerCase())
+    );
   }
 
-  uploadPhoto(id: number, photo: string): IUser {
-    this.users[id].photo.push(photo)
-    return this.users[id]
+  uploadPhoto(id: number, photo: string): IUser[] {
+    this.users = this.users.map((user) =>
+      user.id === id ? { ...user, photo: [...user.photo, photo] } : user
+    );
+    return [...this.users];
   }
 
-  changeAdditionalData(id: number, data: string): IUser {
-    this.users[id].additionalData = data
-    return this.users[id]
+  changeAdditionalData(id: number, data: string): IUser[] {
+    this.users = this.users.map((user) =>
+      user.id === id ? { ...user, additionalData: data } : user
+    );
+    return [...this.users];
   }
 }
 const userDatabaseInstance = new UserDatabase()

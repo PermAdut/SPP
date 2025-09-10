@@ -14,7 +14,7 @@ const initialState: UserState = {
 };
 
 export const getAllUsers = createAsyncThunk<
-  IUser[] | undefined,
+  IUser[],
   void,
   { rejectValue: string }
 >("users/all", async (_: void, { rejectWithValue }) => {
@@ -22,12 +22,12 @@ export const getAllUsers = createAsyncThunk<
     const users = await userApiInstance.getAll();
     return users;
   } catch (err: any) {
-    rejectWithValue(err.message || "Failed to fetch");
+    return rejectWithValue(err.message || "Failed to fetch");
   }
 });
 
 export const changeAdm = createAsyncThunk<
-  IUser[] | undefined,
+  IUser[],
   { id: number; status: boolean },
   { rejectValue: string }
 >(
@@ -40,13 +40,13 @@ export const changeAdm = createAsyncThunk<
       );
       return users;
     } catch (err: any) {
-      rejectWithValue(err.message || "Failed to change");
+      return rejectWithValue(err.message || "Failed to change");
     }
   }
 );
 
 export const filterName = createAsyncThunk<
-  IUser[] | undefined,
+  IUser[],
   { name: string },
   { rejectValue: string }
 >("users/filter/name", async (body: { name: string }, { rejectWithValue }) => {
@@ -54,12 +54,12 @@ export const filterName = createAsyncThunk<
     const users = await userApiInstance.filterByName(body.name);
     return users;
   } catch (err: any) {
-    rejectWithValue(err.message || "Failed to filter");
+    return rejectWithValue(err.message || "Failed to filter");
   }
 });
 
 export const filterSurname = createAsyncThunk<
-  IUser[] | undefined,
+  IUser[],
   { surname: string },
   { rejectValue: string }
 >(
@@ -69,13 +69,13 @@ export const filterSurname = createAsyncThunk<
       const users = await userApiInstance.filterBySurName(body.surname);
       return users;
     } catch (err: any) {
-      rejectWithValue(err.message || "Failed to filter");
+      return rejectWithValue(err.message || "Failed to filter");
     }
   }
 );
 
 export const upload = createAsyncThunk<
-  IUser[] | undefined,
+  IUser[],
   { id: number; photo: string },
   { rejectValue: string }
 >(
@@ -85,13 +85,13 @@ export const upload = createAsyncThunk<
       const users = await userApiInstance.uploadPhoto(body.id, body.photo);
       return users;
     } catch (err: any) {
-      rejectWithValue(err.message || "Failed to upload");
+      return rejectWithValue(err.message || "Failed to upload");
     }
   }
 );
 
 export const changeAddData = createAsyncThunk<
-  IUser[] | undefined,
+  IUser[],
   { id: number; data: string },
   { rejectValue: string }
 >(
@@ -104,7 +104,7 @@ export const changeAddData = createAsyncThunk<
       );
       return users;
     } catch (err: any) {
-      rejectWithValue(err.message || "Failed to upload");
+      return rejectWithValue(err.message || "Failed to upload");
     }
   }
 );
@@ -124,7 +124,7 @@ const userSlice = createSlice({
     });
     builder.addCase(getAllUsers.fulfilled, (state, action) => {
       state.isLoading = false;
-      state.users = action.payload ? action.payload : [];
+      state.users = action.payload;
     });
     builder.addCase(changeAdm.pending, (state) => {
       state.isLoading = true;
@@ -136,7 +136,7 @@ const userSlice = createSlice({
     });
     builder.addCase(changeAdm.fulfilled, (state, action) => {
       state.isLoading = false;
-      state.users = action.payload ? action.payload : [];
+      state.users = action.payload;
     });
     builder.addCase(filterName.pending, (state) => {
       state.isLoading = true;
@@ -148,7 +148,7 @@ const userSlice = createSlice({
     });
     builder.addCase(filterName.fulfilled, (state, action) => {
       state.isLoading = false;
-      state.users = action.payload ? action.payload : [];
+      state.users = action.payload;
     });
     builder.addCase(filterSurname.pending, (state) => {
       state.isLoading = true;
@@ -160,7 +160,7 @@ const userSlice = createSlice({
     });
     builder.addCase(filterSurname.fulfilled, (state, action) => {
       state.isLoading = false;
-      state.users = action.payload ? action.payload : [];
+      state.users = action.payload;
     });
     builder.addCase(upload.pending, (state) => {
       state.isLoading = true;
@@ -172,7 +172,7 @@ const userSlice = createSlice({
     });
     builder.addCase(upload.fulfilled, (state, action) => {
       state.isLoading = false;
-      state.users = action.payload ? action.payload : [];
+      state.users = action.payload;
     });
     builder.addCase(changeAddData.pending, (state) => {
       state.isLoading = true;
@@ -184,7 +184,7 @@ const userSlice = createSlice({
     });
     builder.addCase(changeAddData.fulfilled, (state, action) => {
       state.isLoading = false;
-      state.users = action.payload ? action.payload : [];
+      state.users = action.payload;
     });
   },
 });

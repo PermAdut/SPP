@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
-import { UserResponseDto } from './dto/UserResponseDto'
-import { AppError } from '../../middlewares/error.middleware'
-import userDatabaseInstance from '../../utils/db'
+import { UserResponseDto } from './dto/UserResponseDto.js'
+import { AppError } from '../../middlewares/error.middleware.js'
+import userDatabaseInstance from '../../utils/db.js'
 
 const getAll = async (req: Request<object, UserResponseDto[], null>, res: Response, next: NextFunction) => {
   try {
@@ -13,7 +13,7 @@ const getAll = async (req: Request<object, UserResponseDto[], null>, res: Respon
 }
 
 const uploadFile = async (
-  req: Request<{ id: string }, UserResponseDto, null>,
+  req: Request<{ id: string }, UserResponseDto[], null>,
   res: Response,
   next: NextFunction,
 ) => {
@@ -29,7 +29,7 @@ const uploadFile = async (
 }
 
 const changeAdm = async (
-  req: Request<{ id: string }, UserResponseDto, { status: boolean }>,
+  req: Request<{ id: string }, UserResponseDto[], { status: boolean }>,
   res: Response,
   next: NextFunction,
 ) => {
@@ -42,7 +42,7 @@ const changeAdm = async (
 }
 
 const filterName = async (
-  req: Request<object, UserResponseDto, { name: string }>,
+  req: Request<object, UserResponseDto[], { name: string }>,
   res: Response,
   next: NextFunction,
 ) => {
@@ -55,7 +55,7 @@ const filterName = async (
 }
 
 const filterSurname = async (
-  req: Request<object, UserResponseDto, { surname: string }>,
+  req: Request<object, UserResponseDto[], { surname: string }>,
   res: Response,
   next: NextFunction,
 ) => {
@@ -68,7 +68,7 @@ const filterSurname = async (
 }
 
 const changeDesc = async (
-  req: Request<{id: string}, UserResponseDto, { additionalData: string }>,
+  req: Request<{id: string}, UserResponseDto[], { additionalData: string }>,
   res: Response,
   next: NextFunction,
 ) => {

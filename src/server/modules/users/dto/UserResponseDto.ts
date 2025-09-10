@@ -1,3 +1,3 @@
-import { IUser } from '../user.intreface'
+import { IUser } from '../user.intreface.js'
 
 export interface UserResponseDto extends IUser {}

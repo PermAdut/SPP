@@ -1,8 +1,8 @@
 import { Router } from 'express'
-import controller from './controller'
-import validateMiddleware from '../../middlewares/validate.middleware'
+import controller from './controller.js'
+import validateMiddleware from '../../middlewares/validate.middleware.js'
 import { body, param } from 'express-validator'
-import upload from '../../utils/multer'
+import upload from '../../utils/multer.js'
 
 const router = Router()
 
@@ -30,22 +30,22 @@ router
   .patch(
     [
       param('id').isInt({ min: 0 }).withMessage('Id must be positive').toInt(),
-      body('isAdmin').isBoolean().withMessage('isAdmin must be boolean'),
+      body('status').isBoolean().withMessage('isAdmin must be boolean'),
     ],
     validateMiddleware,
     controller.changeAdm,
   )
 router
-  .route('/filerName')
-  .get(
+  .route('/filterName')
+  .post(
     [body('name').isString().withMessage('Filter name must be string')],
     validateMiddleware,
     controller.filterName,
   )
 router
-  .route('/filerSurname')
-  .get(
-    [body('name').isString().withMessage('Filter surname must be string')],
+  .route('/filterSurname')
+  .post(
+    [body('surname').isString().withMessage('Filter surname must be string')],
     validateMiddleware,
     controller.filterSurname,
   )

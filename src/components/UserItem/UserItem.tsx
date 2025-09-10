@@ -24,7 +24,8 @@ function UserItem({
 }: UserItemProps) {
   const dispatch = useAppDispatch();
   const [newData, setNewData] = useState(additionalData || "");
-
+  const [isAdminState, setIsAdminState] = useState<boolean>(isAdmin)
+  
   const photoElements = useMemo(
     () => (
       <div className={styles.photo_info}>
@@ -48,9 +49,10 @@ function UserItem({
           <Input
             id="admin"
             type="checkbox"
-            checked={isAdmin}
-            onChange={() => {
-              dispatch(changeAdm({ id, status: !isAdmin }));
+            defaultChecked={isAdmin}
+            onChange={(e) => {
+              dispatch(changeAdm({ id, status: e.target.checked }));
+              setIsAdminState(e.target.checked)
             }}
           />
           Admin

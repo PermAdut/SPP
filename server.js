@@ -1,18 +1,25 @@
 import fs from "node:fs/promises";
 import express from "express";
 import { Transform } from "node:stream";
+import { errorHandler } from "./dist/routes/middlewares/error.middleware.js";
+import routes from "./dist/routes/modules/users/routes.js";
+import path from "node:path";
+
 const isProduction = process.env.NODE_ENV === "production";
 const port = process.env.PORT || 5173;
 const base = process.env.BASE || "/";
 const ABORT_DELAY = 10000;
-
+const imagePath = path.join(import.meta.dirname, 'dist', 'routes', 'public', 'img');
+fs.mkdir(imagePath, { recursive: true }).catch(console.error);
 const templateHtml = isProduction
   ? await fs.readFile("./dist/client/index.html", "utf-8")
   : "";
 
 const app = express();
 app.use(express.json())
-
+app.use(errorHandler);
+app.use(routes);
+app.use('/images', express.static(imagePath));
 let vite;
 if (!isProduction) {
   const { createServer } = await import("vite");

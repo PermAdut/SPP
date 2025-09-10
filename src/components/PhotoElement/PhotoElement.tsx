@@ -1,15 +1,17 @@
-import styles from './PhotoElement.module.css'
+import styles from "./PhotoElement.module.css";
 
 type PhotoElementProps = {
-    filename: string
-}
+  filename: string;
+};
 
-const PhotoElement:React.FC<PhotoElementProps> = ({filename = 'vite.svg'}) => {
+const PhotoElement: React.FC<PhotoElementProps> = ({
+  filename = "vite.svg",
+}) => {
   return (
     <>
-    <img src={`${filename}`}></img>
+      <img src={`localhost:5173/images/${filename}`}></img>
     </>
-  )
-}
+  );
+};
 
-export default PhotoElement
+export default PhotoElement;

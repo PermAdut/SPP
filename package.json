@@ -4,13 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node server",
+    "dev": "tsc --project ./src/server & node server",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build --outDir dist/client",
     "build:server": "vite build --ssr src/entry-server.tsx --outDir dist/server",
-    "preview": "cross-env NODE_ENV=production node server"
+    "build:routes": "tsc --project ./src/server"
   },
   "dependencies": {
+    "axios": "^1.11.0",
     "compression": "^1.8.1",
     "express": "^5.1.0",
     "react": "^19.1.1",

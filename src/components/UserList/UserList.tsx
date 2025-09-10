@@ -13,7 +13,7 @@ import useDebounce from "../../hooks/useDobounce";
 
 function UserList() {
   const dispatch = useAppDispatch();
-  const { users, isLoading, error } = useAppSelector((state) => state.user);
+  const { users, error } = useAppSelector((state) => state.user);
 
   const [nameInput, setNameInput] = useState("");
   const [surnameInput, setSurnameInput] = useState("");
@@ -40,8 +40,6 @@ function UserList() {
       )),
     [users]
   );
-
-  if (isLoading) return <p>Loading users...</p>;
   if (error) return <p>Error: {error}</p>;
 
   return (
