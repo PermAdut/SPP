@@ -4,13 +4,11 @@ type PhotoElementProps = {
   filename: string;
 };
 
-const PhotoElement: React.FC<PhotoElementProps> = ({
-  filename = "vite.svg",
-}) => {
+const PhotoElement: React.FC<PhotoElementProps> = ({ filename }) => {
   return (
-    <>
-      <img src={`localhost:5173/images/${filename}`}></img>
-    </>
+    <div className={styles.photo_wrapper}>
+      <img className={styles.photo_img} src={`http://127.0.0.1:5173/images/${filename}`} />
+    </div>
   );
 };
 

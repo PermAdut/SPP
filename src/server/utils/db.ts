@@ -1,55 +1,55 @@
-import { IUser } from '../modules/users/user.intreface.js'
+import { IUser } from "../modules/users/user.intreface.js";
 
 const testUsers: IUser[] = [
   {
     id: 1,
-    name: 'John',
-    surname: 'Doe',
+    name: "John",
+    surname: "Doe",
     isAdmin: true,
-    photo: ['extra.svg', 'logo.svg'],
-    additionalData: 'Software Engineer',
+    photo: ["extra.svg", "logo.svg"],
+    additionalData: "Software Engineer",
   },
   {
     id: 2,
-    name: 'Jane',
-    surname: 'Smith',
+    name: "Jane",
+    surname: "Smith",
     isAdmin: false,
-    photo: ['spring-boot.svg'],
+    photo: ["spring-boot.svg"],
     additionalData: undefined,
   },
   {
     id: 3,
-    name: 'Alice',
-    surname: 'Johnson',
+    name: "Alice",
+    surname: "Johnson",
     isAdmin: false,
-    photo: ['spring-cloud.svg', 'spring.svg'],
-    additionalData: 'Data Scientist',
+    photo: ["spring-cloud.svg", "spring.svg"],
+    additionalData: "Data Scientist",
   },
   {
     id: 4,
-    name: 'Bob',
-    surname: 'Williams',
+    name: "Bob",
+    surname: "Williams",
     isAdmin: true,
-    photo: ['extra.svg'],
-    additionalData: 'Product Manager',
+    photo: ["extra.svg"],
+    additionalData: "Product Manager",
   },
   {
     id: 5,
-    name: 'Emma',
-    surname: 'Davis',
+    name: "Emma",
+    surname: "Davis",
     isAdmin: false,
-    photo: ['logo.svg', 'spring.svg'],
+    photo: ["logo.svg", "spring.svg"],
     additionalData: undefined,
   },
-]
+];
 
 class UserDatabase {
-  private users: IUser[] = [...testUsers]
+  private users: IUser[] = [...testUsers];
   getAll() {
-    return this.users
+    return this.users;
   }
 
-  changeAdminStatus(id: number, status: boolean):IUser[] {
+  changeAdminStatus(id: number, status: boolean): IUser[] {
     this.users = this.users.map((user) =>
       user.id === id ? { ...user, isAdmin: status } : user
     );
@@ -82,6 +82,13 @@ class UserDatabase {
     );
     return [...this.users];
   }
+
+  addUser(user: Omit<IUser, "id">): IUser[] {
+    const lastId = this.users.sort((a, b) => a.id - b.id)[this.users.length - 1]
+      .id;
+    this.users.push({ id: lastId + 1, ...user });
+    return this.users;
+  }
 }
-const userDatabaseInstance = new UserDatabase()
-export default userDatabaseInstance
+const userDatabaseInstance = new UserDatabase();
+export default userDatabaseInstance;

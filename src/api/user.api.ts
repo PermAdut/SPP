@@ -27,27 +27,42 @@ class UserApi {
   }
 
   async changeAdminStatus(id: number, status: boolean): Promise<IUser[]> {
-    const response = await this.axiosInstance.patch(`/adm/${id}`, {status: status})
+    const response = await this.axiosInstance.patch(`/adm/${id}`, {
+      status: status,
+    });
     return response.data;
   }
 
   async filterByName(name: string): Promise<IUser[]> {
-    const response = await this.axiosInstance.post(`/filterName`, {name: name})
+    const response = await this.axiosInstance.post(`/filterName`, {
+      name: name,
+    });
     return response.data;
   }
 
   async filterBySurName(surname: string): Promise<IUser[]> {
-    const response = await this.axiosInstance.post(`/filterSurname`, {surname: surname})
+    const response = await this.axiosInstance.post(`/filterSurname`, {
+      surname: surname,
+    });
     return response.data;
   }
 
-  async uploadPhoto(id: number, photo: string): Promise<IUser[]> {
-    const response = await this.axiosInstance.patch(`/file/${id}`)
+  async uploadPhoto(id: number, photo: FormData): Promise<IUser[]> {
+    const response = await this.axiosInstance.patch(`/file/${id}`, photo, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return response.data;
   }
 
   async changeAdditionalData(id: number, data: string): Promise<IUser[]> {
-    const response = await this.axiosInstance.patch(`/desc/${id}`, {additionalData: data})
+    const response = await this.axiosInstance.patch(`/desc/${id}`, {
+      additionalData: data,
+    });
+    return response.data;
+  }
+
+  async addUser(body: Omit<IUser, "id">): Promise<IUser[]> {
+    const response = await this.axiosInstance.post("/add", body);
     return response.data;
   }
 }

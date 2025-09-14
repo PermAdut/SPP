@@ -1,57 +1,66 @@
 .user_container {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-  background-color: #f9f9f9;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  padding: 32px;
+  margin: 24px auto;
+  max-width: 480px;
   display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  gap:20px
+  flex-direction: column;
+  gap: 24px;
+  transition: box-shadow 0.2s;
 }
 
-.photo_info{
-  flex: 400px 1 1;
+.user_container:hover {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.user_info {
   display: flex;
-  align-self: center;
-  border: 5px solid black;
-  padding: 10px;
-  max-width: 500px;
-}
-
-.photoElement {
-  font-size: 14px;
-  margin: 4px 0;
-  color: #555;
-}
-
-.photo{
-  font-size: 20px;
-}
-
-.adminCheckbox {
-  margin-top: 8px;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .name {
-  font-size: 28px;
-  font-weight: bold;
-  margin: 8px 0 4px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2d3748;
 }
 
 .surname {
-  font-size: 20px;
-  color: #333;
+  font-size: 1.2rem;
+  color: #4a5568;
 }
 
-.additional_data{
+.photo {
+  margin-top: 8px;
+  font-weight: 600;
+  color: #3182ce;
+}
+
+.photo_info {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.adminCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  color: #2b6cb0;
+}
+
+.additional_data {
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
-  flex-basis: 250px;
+  gap: 6px;
 }
 
-.additional_info{
-  font-size: 2rem;
+.additional_info {
+  font-weight: 600;
+  color: #718096;
 }

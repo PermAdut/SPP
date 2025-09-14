@@ -8,7 +8,6 @@ import Input from "../../ui/Input/Input";
 import PhotoElement from "../PhotoElement/PhotoElement";
 
 interface UserItemProps extends IUser {
-  onUpload: (id: number, photo: string) => void;
   filterName?: string;
   filterSurname?: string;
 }
@@ -20,12 +19,11 @@ function UserItem({
   isAdmin,
   photo,
   additionalData,
-  onUpload,
 }: UserItemProps) {
   const dispatch = useAppDispatch();
   const [newData, setNewData] = useState(additionalData || "");
-  const [isAdminState, setIsAdminState] = useState<boolean>(isAdmin)
-  
+  const [isAdminState, setIsAdminState] = useState<boolean>(isAdmin);
+
   const photoElements = useMemo(
     () => (
       <div className={styles.photo_info}>
@@ -52,14 +50,14 @@ function UserItem({
             defaultChecked={isAdmin}
             onChange={(e) => {
               dispatch(changeAdm({ id, status: e.target.checked }));
-              setIsAdminState(e.target.checked)
+              setIsAdminState(e.target.checked);
             }}
           />
           Admin
         </label>
       </div>
 
-      <PhotoUploader userId={id} onUpload={onUpload} />
+      <PhotoUploader userId={id} />
 
       <div className={styles.additional_data}>
         <strong className={styles.additional_info}>Additional Info:</strong>

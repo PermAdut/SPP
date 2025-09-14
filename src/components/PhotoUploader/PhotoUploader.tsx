@@ -1,35 +1,39 @@
 import { useState } from "react";
+import { useAppDispatch } from "../../hooks/redux";
+import { upload } from "../../store/slice/userSlice";
 
 interface PhotoUploaderProps {
   userId: number;
-  onUpload: (id: number, photo: string) => void;
 }
 
-function PhotoUploader({ userId, onUpload }: PhotoUploaderProps) {
+function PhotoUploader({ userId }: PhotoUploaderProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const dispatch = useAppDispatch();
 
-  const handleFileChange = (event:React.ChangeEvent<HTMLInputElement>) => {
-    if(event.target.files?.length){
-      const file = event.target.files[0]
-      setSelectedFile(file)
-    } 
-  }
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files?.length) {
+      setSelectedFile(event.target.files[0]);
+    }
+  };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!selectedFile) {
-      alert('Пожалуйста, выберите файл для загрузки.');
+      alert("Please select a file to upload.");
       return;
     }
 
-    const formData = new FormData()
-    formData.append('file', selectedFile)
-    onUpload(userId, selectedFile.name.trim());
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+    dispatch(upload({ id: userId, photo: formData }))
+      .unwrap()
+      .catch(() => {
+        alert("Error uploading photo");
+      });
   };
-
 
   return (
     <div style={{ marginTop: "12px" }}>
-      <input type="file" onChange={handleFileChange}/>
+      <input type="file" onChange={handleFileChange} />
       <button onClick={handleUpload} style={{ marginLeft: "8px" }}>
         Upload
       </button>
