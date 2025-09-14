@@ -10,8 +10,10 @@ import { useAppDispatch, useAppSelector } from "../../hooks/redux";
 import styles from "./UserList.module.css";
 import Input from "../../ui/Input/Input";
 import useDebounce from "../../hooks/useDobounce";
+import { useNavigate } from "react-router";
 
 function UserList() {
+  const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { users, error } = useAppSelector((state) => state.user);
 
@@ -29,22 +31,16 @@ function UserList() {
     dispatch(getAllUsers());
   }, [dispatch]);
 
-  const handleUpload = (id: number, photo: string) => {
-    dispatch(upload({ id, photo }));
-  };
-
   const usersMemo = useMemo(
-    () =>
-      users.map((user) => (
-        <UserItem key={user.id} {...user} onUpload={handleUpload} />
-      )),
+    () => users.map((user) => <UserItem key={user.id} {...user} />),
     [users]
   );
   if (error) return <p>Error: {error}</p>;
 
   return (
     <div>
-      <div className={styles.search_container}>
+      <div className={styles.list_container}>
+        <button className={styles.add_btn} onClick={() => navigate("/new")}>Add new user</button>
         <Input
           id="name"
           type="text"

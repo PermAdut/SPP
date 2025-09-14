@@ -1,52 +1,60 @@
-import { Router } from 'express'
-import controller from './controller.js'
-import validateMiddleware from '../../middlewares/validate.middleware.js'
-import { body, param } from 'express-validator'
-import upload from '../../utils/multer.js'
+import { Router } from "express";
+import controller from "./controller.js";
+import validateMiddleware from "../../middlewares/validate.middleware.js";
+import { body, param } from "express-validator";
+import upload from "../../utils/multer.js";
 
-const router = Router()
+const router = Router();
 
-router.route('/all').get(controller.getAll)
+router.route("/all").get(controller.getAll);
 router
-  .route('/file/:id')
+  .route("/file/:id")
   .patch(
-    [param('id').isInt({ min: 0 }).withMessage('Id must be positive').toInt()],
+    [param("id").isInt({ min: 0 }).withMessage("Id must be positive").toInt()],
     validateMiddleware,
-    upload.single('file'),
-    controller.uploadFile,
-  )
+    upload.single("file"),
+    controller.uploadFile
+  );
 router
-  .route('/desc/:id')
+  .route("/desc/:id")
+  .patch(
+    [param("id").isInt({ min: 0 }).withMessage("Id must be positive").toInt()],
+    validateMiddleware,
+    controller.changeDesc
+  );
+router
+  .route("/adm/:id")
   .patch(
     [
-      param('id').isInt({ min: 0 }).withMessage('Id must be positive').toInt(),
-      body('additionalData').isString().withMessage('Additional data must be string'),
+      param("id").isInt({ min: 0 }).withMessage("Id must be positive").toInt(),
+      body("status").isBoolean().withMessage("isAdmin must be boolean"),
     ],
     validateMiddleware,
-    controller.changeDesc,
-  )
+    controller.changeAdm
+  );
 router
-  .route('/adm/:id')
-  .patch(
+  .route("/filterName")
+  .post(
+    [body("name").isString().withMessage("Filter name must be string")],
+    validateMiddleware,
+    controller.filterName
+  );
+router
+  .route("/filterSurname")
+  .post(
+    [body("surname").isString().withMessage("Filter surname must be string")],
+    validateMiddleware,
+    controller.filterSurname
+  );
+router
+  .route("/add")
+  .post(
     [
-      param('id').isInt({ min: 0 }).withMessage('Id must be positive').toInt(),
-      body('status').isBoolean().withMessage('isAdmin must be boolean'),
+      body("name").isString().withMessage("Filter name must be string"),
+      body("surname").isString().withMessage("Filter surname must be string"),
+      body("isAdmin").isBoolean().withMessage("isAdmin must be boolean"),
     ],
     validateMiddleware,
-    controller.changeAdm,
-  )
-router
-  .route('/filterName')
-  .post(
-    [body('name').isString().withMessage('Filter name must be string')],
-    validateMiddleware,
-    controller.filterName,
-  )
-router
-  .route('/filterSurname')
-  .post(
-    [body('surname').isString().withMessage('Filter surname must be string')],
-    validateMiddleware,
-    controller.filterSurname,
-  )
-export default router
+    controller.addUser
+  );
+export default router;

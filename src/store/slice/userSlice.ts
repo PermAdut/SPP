@@ -76,19 +76,16 @@ export const filterSurname = createAsyncThunk<
 
 export const upload = createAsyncThunk<
   IUser[],
-  { id: number; photo: string },
+  { id: number; photo: FormData },
   { rejectValue: string }
->(
-  "users/upload",
-  async (body: { id: number; photo: string }, { rejectWithValue }) => {
-    try {
-      const users = await userApiInstance.uploadPhoto(body.id, body.photo);
-      return users;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Failed to upload");
-    }
+>("users/upload", async ({ id, photo }, { rejectWithValue }) => {
+  try {
+    const res = await userApiInstance.uploadPhoto(id, photo);
+    return res;
+  } catch (err: any) {
+    return rejectWithValue("Ошибка загрузки фото");
   }
-);
+});
 
 export const changeAddData = createAsyncThunk<
   IUser[],
@@ -108,6 +105,19 @@ export const changeAddData = createAsyncThunk<
     }
   }
 );
+
+export const createUser = createAsyncThunk<
+  IUser[],
+  Omit<IUser, "id">,
+  { rejectValue: string }
+>("users/add", async (body: Omit<IUser, "id">, { rejectWithValue }) => {
+  try {
+    const users = await userApiInstance.addUser(body);
+    return users;
+  } catch (err: any) {
+    return rejectWithValue(err.message || "Failed to upload");
+  }
+});
 
 const userSlice = createSlice({
   name: "users",
@@ -183,6 +193,17 @@ const userSlice = createSlice({
       state.users = [];
     });
     builder.addCase(changeAddData.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.users = action.payload;
+    });
+    builder.addCase(createUser.pending, (state) => {
+      state.isLoading = true;
+    });
+    builder.addCase(createUser.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+    builder.addCase(createUser.fulfilled, (state, action) => {
       state.isLoading = false;
       state.users = action.payload;
     });
