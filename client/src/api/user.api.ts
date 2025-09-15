@@ -1,4 +1,5 @@
-import axios, { type AxiosInstance } from "axios";
+import { type AxiosInstance } from "axios";
+import axiosInstance from "./axiosInstance";
 
 export interface IUser {
   id: number;
@@ -10,61 +11,50 @@ export interface IUser {
 }
 
 class UserApi {
-  private axiosInstance: AxiosInstance = axios.create({
-    baseURL: "http://localhost:3000/api/v1.0/users",
-  });
-  constructor() {
-    this.axiosInstance.interceptors.response.use(
-      (res) => res,
-      (err) => {
-        console.error(err);
-        throw err;
-      }
-    );
-  }
+  private axiosInstance: AxiosInstance = axiosInstance;
 
   async getAll(): Promise<IUser[]> {
-    const response = await this.axiosInstance.get("/");
+    const response = await this.axiosInstance.get("/users/");
     return response.data;
   }
 
   async changeAdminStatus(id: number, status: boolean): Promise<IUser[]> {
-    const response = await this.axiosInstance.patch(`/adm/${id}`, {
+    const response = await this.axiosInstance.patch(`/users/adm/${id}`, {
       status: status,
     });
     return response.data;
   }
 
   async filterByName(name: string): Promise<IUser[]> {
-    const response = await this.axiosInstance.post(`/filterName`, {
+    const response = await this.axiosInstance.post(`/users/filterName`, {
       name: name,
     });
     return response.data;
   }
 
   async filterBySurName(surname: string): Promise<IUser[]> {
-    const response = await this.axiosInstance.post(`/filterSurname`, {
+    const response = await this.axiosInstance.post(`/users/filterSurname`, {
       surname: surname,
     });
     return response.data;
   }
 
   async uploadPhoto(id: number, photo: FormData): Promise<IUser[]> {
-    const response = await this.axiosInstance.patch(`/file/${id}`, photo, {
+    const response = await this.axiosInstance.patch(`/users/file/${id}`, photo, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return response.data;
   }
 
   async changeAdditionalData(id: number, data: string): Promise<IUser[]> {
-    const response = await this.axiosInstance.patch(`/desc/${id}`, {
+    const response = await this.axiosInstance.patch(`/users/desc/${id}`, {
       additionalData: data,
     });
     return response.data;
   }
 
   async addUser(body: Omit<IUser, "id">): Promise<IUser[]> {
-    const response = await this.axiosInstance.post("/", body);
+    const response = await this.axiosInstance.post("/users/", body);
     return response.data;
   }
 
@@ -73,7 +63,7 @@ class UserApi {
   }
 
   async updateUser(user: Partial<IUser> & {id: number}): Promise<IUser[]> {
-    const response = await this.axiosInstance.put(`/${user.id}`, user);
+    const response = await this.axiosInstance.put(`/users/${user.id}`, user);
     return response.data;
   }
 }
