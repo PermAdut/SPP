@@ -6,12 +6,9 @@ const storage = multer.diskStorage({
     callback(
       null,
       path.join(
-        import.meta.dirname,
+        __dirname,
         "..",
         "..",
-        "..",
-        "dist",
-        "routes",
         "public",
         "img"
       )

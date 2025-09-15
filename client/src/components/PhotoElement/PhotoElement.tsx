@@ -7,7 +7,7 @@ type PhotoElementProps = {
 const PhotoElement: React.FC<PhotoElementProps> = ({ filename }) => {
   return (
     <div className={styles.photo_wrapper}>
-      <img className={styles.photo_img} src={`http://127.0.0.1:5173/images/${filename}`} />
+      <img className={styles.photo_img} src={`http://127.0.0.1:3000/images/${filename}`} />
     </div>
   );
 };

@@ -24,7 +24,7 @@ class UserApi {
   }
 
   async getAll(): Promise<IUser[]> {
-    const response = await this.axiosInstance.get("/all");
+    const response = await this.axiosInstance.get("/");
     return response.data;
   }
 
@@ -64,7 +64,16 @@ class UserApi {
   }
 
   async addUser(body: Omit<IUser, "id">): Promise<IUser[]> {
-    const response = await this.axiosInstance.post("/add", body);
+    const response = await this.axiosInstance.post("/", body);
+    return response.data;
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    await this.axiosInstance.delete(`/${id}`);
+  }
+
+  async updateUser(user: Partial<IUser> & {id: number}): Promise<IUser[]> {
+    const response = await this.axiosInstance.put(`/${user.id}`, user);
     return response.data;
   }
 }

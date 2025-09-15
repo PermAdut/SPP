@@ -120,6 +120,29 @@ export const createUser = createAsyncThunk<
   }
 });
 
+export const updateUser = createAsyncThunk(
+  "users/updateUser",
+  async (user: { id: number; name: string; surname: string; isAdmin: boolean; additionalData?: string }, { rejectWithValue }) => {
+    try {
+      const res = await userApiInstance.updateUser(user);
+      return res;
+    } catch(err:any) {
+      return rejectWithValue(err.message || "Error updating user");
+    }
+  }
+);
+
+export const deleteUser = createAsyncThunk(
+  "users/deleteUser",
+  async (id: number, { rejectWithValue }) => {
+    try {
+      await userApiInstance.deleteUser(id);
+    } catch(err:any) {
+      return rejectWithValue(err.message || "Error deleting user");
+    }
+  }
+);
+
 const userSlice = createSlice({
   name: "users",
   initialState: initialState,
@@ -207,6 +230,28 @@ const userSlice = createSlice({
     builder.addCase(createUser.fulfilled, (state, action) => {
       state.isLoading = false;
       state.users = action.payload;
+    });
+    builder.addCase(updateUser.pending, (state) => {
+      state.isLoading = true;
+    });
+    builder.addCase(updateUser.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+    builder.addCase(updateUser.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.users = action.payload;
+    });
+    builder.addCase(deleteUser.pending, (state) => {
+      state.isLoading = true;
+    });
+    builder.addCase(deleteUser.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+    builder.addCase(deleteUser.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.users = state.users.filter(user => user.id !== action.meta.arg);
     });
   },
 });

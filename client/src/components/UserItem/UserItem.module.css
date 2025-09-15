@@ -60,6 +60,11 @@
   gap: 6px;
 }
 
+.additional_text{
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
 .additional_info {
   font-weight: 600;
   color: #718096;
