@@ -14,7 +14,7 @@ import { useNavigate } from "react-router";
 function UserList() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { users, error } = useAppSelector((state) => state.user);
+  const { users } = useAppSelector((state) => state.user);
 
   const [nameInput, setNameInput] = useState("");
   const [surnameInput, setSurnameInput] = useState("");
@@ -34,12 +34,13 @@ function UserList() {
     () => users.map((user) => <UserItem key={user.id} {...user} />),
     [users]
   );
-  if (error) return <p>Error: {error}</p>;
 
   return (
     <div>
       <div className={styles.list_container}>
-        <button className={styles.add_btn} onClick={() => navigate("/new")}>Add new user</button>
+        <button className={styles.add_btn} onClick={() => navigate("/new")}>
+          Add new user
+        </button>
         <Input
           id="name"
           type="text"
