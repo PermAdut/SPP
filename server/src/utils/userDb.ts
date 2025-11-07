@@ -1,7 +1,15 @@
 import { AppError } from '../middlewares/error.middleware'
-import { IUser } from '../modules/users/user.intreface'
+import { IUser } from '../modules/users/user.interface'
 
 const testUsers: IUser[] = [
+  {
+    id: 0,
+    name: 'Admin',
+    surname: 'User',
+    isAdmin: true,
+    photo: [],
+    additionalData: 'Administrator',
+  },
   {
     id: 1,
     name: 'John',
@@ -50,6 +58,10 @@ class UserDatabase {
     return this.users
   }
 
+  getById(id: number): IUser | undefined {
+    return this.users.find((user) => user.id === id)
+  }
+
   changeAdminStatus(id: number, status: boolean): IUser[] {
     this.users = this.users.map((user) => (user.id === id ? { ...user, isAdmin: status } : user))
 
@@ -95,3 +107,4 @@ class UserDatabase {
 }
 const userDatabaseInstance = new UserDatabase()
 export default userDatabaseInstance
+
