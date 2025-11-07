@@ -3,6 +3,14 @@ import { IUser } from '../modules/users/user.intreface'
 
 const testUsers: IUser[] = [
   {
+    id: 0,
+    name: 'Admin',
+    surname: 'User',
+    isAdmin: true,
+    photo: [],
+    additionalData: 'Administrator',
+  },
+  {
     id: 1,
     name: 'John',
     surname: 'Doe',
@@ -48,6 +56,10 @@ class UserDatabase {
   private users: IUser[] = [...testUsers]
   getAll() {
     return this.users
+  }
+
+  getById(id: number): IUser | undefined {
+    return this.users.find((user) => user.id === id)
   }
 
   changeAdminStatus(id: number, status: boolean): IUser[] {
