@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import type { AuthResponse, LoginCredentials } from "../../api/auth.api";
 import authApiInstance from "../../api/auth.api";
@@ -23,7 +22,11 @@ export const loginUser = createAsyncThunk<
   try {
     const response = await authApiInstance.login(credentials);
     localStorage.setItem("accessToken", response.accessToken);
+    if (response.refreshToken) {
+      localStorage.setItem("refreshToken", response.refreshToken);
+    }
     return response;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.log(err);
     return rejectWithValue(err.message || "Failed to login");
@@ -42,13 +45,10 @@ const authSlice = createSlice({
       state.error = null;
       state.isLoading = false;
       localStorage.removeItem("accessToken");
-      document.cookie
-        .split(";")
-        .forEach(
-          (c) =>
-            (document.cookie =
-              c.replace(/^ +/, "").split("=")[0] + "=;Max-Age=-99999999;")
-        );
+      localStorage.removeItem("refreshToken");
+      import("../../services/socket.service").then((module) => {
+        module.default.disconnect();
+      });
     },
   },
   extraReducers: (builder) => {

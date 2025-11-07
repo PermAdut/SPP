@@ -1,7 +1,15 @@
 import { AppError } from '../middlewares/error.middleware'
-import { IUser } from '../modules/users/user.intreface'
+import { IUser } from '../modules/users/user.interface'
 
 const testUsers: IUser[] = [
+  {
+    id: 0,
+    name: 'Admin',
+    surname: 'User',
+    isAdmin: true,
+    photo: [],
+    additionalData: 'Administrator',
+  },
   {
     id: 1,
     name: 'John',
@@ -42,12 +50,56 @@ const testUsers: IUser[] = [
     photo: ['logo.svg', 'spring.svg'],
     additionalData: undefined,
   },
+  {
+    id: 6,
+    name: 'Michael',
+    surname: 'Brown',
+    isAdmin: false,
+    photo: ['spring-data.svg'],
+    additionalData: 'Frontend Developer',
+  },
+  {
+    id: 7,
+    name: 'Sarah',
+    surname: 'Wilson',
+    isAdmin: false,
+    photo: ['spring-framework.svg'],
+    additionalData: 'Backend Developer',
+  },
+  {
+    id: 8,
+    name: 'David',
+    surname: 'Miller',
+    isAdmin: false,
+    photo: ['spring-security.svg'],
+    additionalData: 'DevOps Engineer',
+  },
+  {
+    id: 9,
+    name: 'Lisa',
+    surname: 'Anderson',
+    isAdmin: false,
+    photo: ['spring-data-flow.svg'],
+    additionalData: 'QA Engineer',
+  },
+  {
+    id: 10,
+    name: 'Robert',
+    surname: 'Taylor',
+    isAdmin: false,
+    photo: [],
+    additionalData: 'UI/UX Designer',
+  },
 ]
 
 class UserDatabase {
   private users: IUser[] = [...testUsers]
   getAll() {
     return this.users
+  }
+
+  getById(id: number): IUser | undefined {
+    return this.users.find((user) => user.id === id)
   }
 
   changeAdminStatus(id: number, status: boolean): IUser[] {

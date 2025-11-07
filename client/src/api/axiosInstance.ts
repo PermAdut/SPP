@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios, { AxiosError } from "axios";
 import authApiInstance from "./auth.api";
 
@@ -18,6 +17,7 @@ axiosInstance.interceptors.request.use((config) => {
 axiosInstance.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const originalRequest = error.config as any;
     if (
       error.response?.status === 401 &&
@@ -26,7 +26,9 @@ axiosInstance.interceptors.response.use(
     ) {
       originalRequest._retry = true;
       try {
-        const response = await authApiInstance.refresh();
+        const response = await authApiInstance.refresh(
+          localStorage.getItem("refreshToken") || ""
+        );
         localStorage.setItem("accessToken", response.accessToken);
         originalRequest.headers.Authorization = `Bearer ${response.accessToken}`;
         return axiosInstance(originalRequest);
