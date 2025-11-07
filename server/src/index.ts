@@ -5,7 +5,7 @@ import errorHandler from './middlewares/error.middleware'
 import path from 'path'
 import authRouter from './modules/auth/auth.route'
 import cookieParser from 'cookie-parser'
-import { initializeSocket } from './socket/socket'
+import { createApolloServer } from './graphql/apolloServer'
 
 const corsOptions = {
   origin: `http://localhost:5173`,
@@ -25,10 +25,23 @@ app.use('/api/v1.0/auth', authRouter) // Оставляем REST API тольк�
 app.use(errorHandler)
 app.use('/images', express.static(imagePath))
 
-// Инициализация Socket.IO
-initializeSocket(httpServer)
+// Инициализация Apollo Server
+const apolloServer = createApolloServer()
 
-httpServer.listen(3000, () => {
-  console.log('Server started on port 3000')
-  console.log('Socket.IO server initialized')
+const startServer = async () => {
+  await apolloServer.start()
+  apolloServer.applyMiddleware({ app, path: '/graphql', cors: corsOptions })
+  
+  // Устанавливаем обработчик для WebSocket subscriptions
+  ;(apolloServer as any).installSubscriptionHandlers(httpServer)
+
+  httpServer.listen(3000, () => {
+    console.log('Server started on port 3000')
+    console.log(`GraphQL endpoint: http://localhost:3000${apolloServer.graphqlPath}`)
+    console.log(`GraphQL subscriptions: ws://localhost:3000${apolloServer.graphqlPath}`)
+  })
+}
+
+startServer().catch((error) => {
+  console.error('Error starting server:', error)
 })

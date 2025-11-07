@@ -23,9 +23,6 @@ export const loginUser = createAsyncThunk<
   try {
     const response = await authApiInstance.login(credentials);
     localStorage.setItem("accessToken", response.accessToken);
-    // Подключаем Socket.IO после успешного логина
-    const socketService = (await import("../../services/socket.service")).default;
-    socketService.connect(response.accessToken);
     return response;
   } catch (err: any) {
     console.log(err);
@@ -45,10 +42,6 @@ const authSlice = createSlice({
       state.error = null;
       state.isLoading = false;
       localStorage.removeItem("accessToken");
-      // Отключаем Socket.IO при выходе
-      import("../../services/socket.service").then((module) => {
-        module.default.disconnect();
-      });
       document.cookie
         .split(";")
         .forEach(

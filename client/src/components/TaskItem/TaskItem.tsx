@@ -1,6 +1,11 @@
 import { useState } from "react";
-import { useAppDispatch } from "../../hooks/redux";
-import { deleteTask, toggleTaskComplete, updateTaskAction } from "../../store/slices/taskSlice";
+import { useMutation } from "@apollo/client";
+import {
+  UPDATE_TASK,
+  DELETE_TASK,
+  TOGGLE_TASK_COMPLETE,
+  GET_TASKS,
+} from "../../graphql/queries";
 import { ITask } from "../../api/task.api";
 import TaskForm from "../TaskForm/TaskForm";
 import styles from "./TaskItem.module.css";
@@ -10,17 +15,36 @@ interface TaskItemProps {
 }
 
 function TaskItem({ task }: TaskItemProps) {
-  const dispatch = useAppDispatch();
   const [isEditing, setIsEditing] = useState(false);
 
-  const handleToggleComplete = () => {
-    dispatch(toggleTaskComplete(task.id));
+  const [updateTaskMutation] = useMutation(UPDATE_TASK, {
+    refetchQueries: [{ query: GET_TASKS }],
+  });
+
+  const [deleteTaskMutation] = useMutation(DELETE_TASK, {
+    refetchQueries: [{ query: GET_TASKS }],
+  });
+
+  const [toggleCompleteMutation] = useMutation(TOGGLE_TASK_COMPLETE, {
+    refetchQueries: [{ query: GET_TASKS }],
+  });
+
+  const handleToggleComplete = async () => {
+    try {
+      await toggleCompleteMutation({
+        variables: { id: task.id.toString() },
+      });
+    } catch (error: any) {
+      alert(error.message || "Ошибка при изменении статуса задачи");
+    }
   };
 
   const handleDelete = async () => {
     if (window.confirm("Удалить задачу?")) {
       try {
-        await dispatch(deleteTask(task.id));
+        await deleteTaskMutation({
+          variables: { id: task.id.toString() },
+        });
       } catch (error: any) {
         alert(error.message || "Ошибка при удалении задачи");
       }
@@ -29,11 +53,23 @@ function TaskItem({ task }: TaskItemProps) {
 
   const handleUpdate = async (updates: Partial<Omit<ITask, "id" | "createdAt">>) => {
     try {
-      await dispatch(updateTaskAction(task.id, updates));
+      await updateTaskMutation({
+        variables: {
+          id: task.id.toString(),
+          input: {
+            title: updates.title,
+            description: updates.description,
+            isPublic: updates.isPublic,
+            priority: updates.priority,
+            deadline: updates.deadline,
+            category: updates.category,
+            tags: updates.tags,
+          },
+        },
+      });
       setIsEditing(false);
     } catch (error: any) {
-      console.error("Failed to update task:", error);
-      throw error; // Пробрасываем ошибку в форму
+      throw error;
     }
   };
 
@@ -125,4 +161,3 @@ function TaskItem({ task }: TaskItemProps) {
 }
 
 export default TaskItem;
-
