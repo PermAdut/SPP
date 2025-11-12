@@ -1,6 +1,6 @@
 import { Server as HttpServer } from 'http'
 import { Server, Socket } from 'socket.io'
-import { authenticateSocket, setupUserHandlers, setupTaskHandlers, setupAuthHandlers } from './socket.handlers'
+import { authenticateSocket, setupTaskHandlers, setupAuthHandlers } from './socket.handlers'
 
 interface AuthenticatedSocket extends Socket {
   userId?: number
@@ -38,8 +38,6 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
     )
 
     setupAuthHandlers(io, socket)
-
-    setupUserHandlers(io, socket)
     setupTaskHandlers(io, socket)
 
     socket.on('auth:reconnect', async (token: string) => {

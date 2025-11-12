@@ -1,0 +1,103 @@
+type Task {
+  id: ID!
+  title: String!
+  description: String
+  userId: Int
+  isPublic: Boolean!
+  completed: Boolean!
+  createdAt: String!
+  priority: String!
+  deadline: String
+  category: String!
+  tags: [String!]!
+  files: [String!]!
+  responsiblePhone: String
+}
+
+type User {
+  id: ID!
+  name: String!
+  surname: String!
+  isAdmin: Boolean!
+  photo: [String!]!
+  additionalData: String
+}
+
+type AuthResponse {
+  accessToken: String!
+  refreshToken: String!
+}
+
+type RefreshResponse {
+  accessToken: String!
+}
+
+input CreateTaskInput {
+  title: String!
+  description: String
+  userId: Int
+  isPublic: Boolean!
+  priority: String!
+  deadline: String
+  category: String!
+  tags: [String!]!
+  files: [String!]
+  responsiblePhone: String
+}
+
+input UpdateTaskInput {
+  title: String
+  description: String
+  isPublic: Boolean
+  priority: String
+  deadline: String
+  category: String
+  tags: [String!]
+  files: [String!]
+  responsiblePhone: String
+}
+
+input LoginInput {
+  username: String!
+  password: String!
+}
+
+input CreateUserInput {
+  name: String!
+  surname: String!
+  isAdmin: Boolean!
+  photo: [String!]!
+  additionalData: String
+}
+
+input UpdateUserInput {
+  name: String
+  surname: String
+  isAdmin: Boolean
+  photo: [String!]
+  additionalData: String
+}
+
+type Query {
+  tasks: [Task!]!
+  task(id: ID!): Task
+  users: [User!]!
+  user(id: ID!): User
+  filterUsersByName(name: String!): [User!]!
+  filterUsersBySurname(surname: String!): [User!]!
+}
+
+type Mutation {
+  login(input: LoginInput!): AuthResponse!
+  refreshToken(refreshToken: String!): RefreshResponse!
+
+  createTask(input: CreateTaskInput!): [Task!]!
+  updateTask(id: ID!, input: UpdateTaskInput!): [Task!]!
+  deleteTask(id: ID!): Boolean!
+  toggleTaskComplete(id: ID!): [Task!]!
+
+  createUser(input: CreateUserInput!): [User!]!
+  updateUser(id: ID!, input: UpdateUserInput!): [User!]!
+  deleteUser(id: ID!): Boolean!
+  changeAdminStatus(id: ID!, status: Boolean!): [User!]!
+}

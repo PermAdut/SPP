@@ -1,0 +1,634 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+    DialogClose,
+} from '@/components/ui/dialog';
+import { ControlledSingleSelect } from '../../../../components/common/ControlledSingleSelect';
+import { SubmitHandler, useForm } from 'react-hook-form';
+import { ControlledInput } from '../../../../components/common/ControlledInput/ControlledInput';
+import { Button } from '@/components/ui/button';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { CreateChannelSchema, createChannelSchema } from './newChannel.schema';
+import { CHANNEL_TYPE_OPTIONS, EMAIL_CHANNEL_PROVIDER_OPTIONS } from '../../../../constants';
+import { channelsApi } from '@/api/channelsApi';
+import { llmModelsApi } from '../../../../api/llmModelsApi';
+import {
+    Channel,
+    CHANNEL_TYPE,
+    DefaultGoogleParams,
+    EmailChannelConfig,
+    OAuthRequestDTO,
+} from '@/api/types';
+import { Form } from '@/components/ui/form';
+import { isFetchBaseQueryError, showErrorToast, showSuccessToast } from '@/utils';
+import { ControlledTimeInput, Typography } from '@/components/common';
+import { intentsApi } from '@/api/intentsApi';
+import { organizationsApi } from '@/api/organizationsApi';
+import { useLocation } from 'react-router-dom';
+import Cookies from 'js-cookie';
+
+type NewChannelModalProps = {
+    channel: Channel | null;
+    open: boolean;
+    onClose: () => void;
+    isInitiateLoading: boolean;
+    initiateGoogleAuth: (formState: OAuthRequestDTO) => Promise<void>;
+};
+
+export const NewChannelModal: React.FC<NewChannelModalProps> = ({
+    open,
+    onClose,
+    channel,
+    isInitiateLoading,
+    initiateGoogleAuth,
+}) => {
+    const [createChannel, { isLoading: isCreateChannelLoading }] =
+        channelsApi.useCreateChannelMutation();
+    const [updateChannel, { isLoading: isUpdateChannelLoading }] =
+        channelsApi.useUpdateChannelMutation();
+    const { data: llmModels } = llmModelsApi.useGelAllowedLlmModelsQuery();
+    const { data: intents } = intentsApi.useGetIntentsQuery({ isActive: true });
+    const { data: organizationInfo } = organizationsApi.useGetCurrentAccountQuery();
+    const location = useLocation();
+    const [isAuthorized, setIsAuthorized] = useState(false);
+
+    const llmModelsOptions = useMemo(
+        () => llmModels?.map((llmModel) => ({ label: llmModel.name, value: llmModel.id })) ?? [],
+        [llmModels],
+    );
+    const intentsOptions = useMemo(() => {
+        const options = intents?.map((intent) => ({ label: intent.name, value: intent.id })) ?? [];
+        return [{ label: 'AI-Классификатор', value: 'auto' }, ...options];
+    }, [intents]);
+
+    const defaultLlm = useMemo(() => {
+        return llmModels?.find((model) => model.name === 'gpt-4.1');
+    }, [llmModels]);
+
+    const defaultValues = useMemo(
+        () => ({
+            name: channel?.name,
+            type: channel?.type,
+            config: channel?.config,
+            intentId: channel?.intentId || 'auto',
+            llmModelId: channel?.llmModelId ?? defaultLlm?.id,
+            archiveTimer: channel?.archiveTimer,
+        }),
+        [channel, defaultLlm],
+    );
+
+    const form = useForm<CreateChannelSchema>({
+        resolver: zodResolver(createChannelSchema),
+        defaultValues: { ...defaultValues },
+    });
+
+    const { control, handleSubmit, reset, setValue, formState, clearErrors, watch, trigger } = form;
+    const selectedType = watch('type');
+    const selectedProvider = watch('config.provider');
+    const formValues = watch();
+
+    useEffect(() => {
+        const handleDefault = async () => {
+            if (!open) return;
+
+            const getQueryParams = () => {
+                const params = new URLSearchParams(location.search);
+                return {
+                    redirect: params.get('redirect'),
+                    provider: params.get('provider'),
+                    error: params.get('error'),
+                    errorMessage: params.get('message'),
+                    name: params.get('form_name'),
+                    type: params.get('form_type'),
+                    intentId: params.get('form_intentId'),
+                    llmModelId: params.get('form_llmModelId'),
+                    archiveTimer: params.get('form_archiveTimer'),
+                    providerConfig: params.get('form_config_provider'),
+                    inboxAddressConfig: params.get('form_config_inbox_address'),
+                    piiDocumentUrl: params.get('form_piiDocumentUrl'),
+                };
+            };
+            const {
+                redirect,
+                provider,
+                error,
+                errorMessage,
+                name,
+                type,
+                intentId,
+                llmModelId,
+                archiveTimer,
+                inboxAddressConfig,
+            } = getQueryParams();
+
+            if (!channel && (redirect === 'oauth_success' || error)) {
+                const restoredValues: Partial<CreateChannelSchema> = {};
+                if (name) restoredValues.name = name;
+                if (type) restoredValues.type = type as CHANNEL_TYPE;
+                if (intentId) restoredValues.intentId = intentId === 'auto' ? 'auto' : intentId;
+                if (llmModelId) restoredValues.llmModelId = llmModelId;
+                if (archiveTimer) restoredValues.archiveTimer = Number(archiveTimer);
+                reset(restoredValues, { keepDirty: true, keepTouched: true });
+                await trigger();
+            }
+
+            if (redirect === 'oauth_success' && provider === 'google') {
+                const accessToken = Cookies.get('oauthAccess');
+                const refreshToken = Cookies.get('oauthRefresh');
+                if (accessToken && refreshToken) {
+                    setValue('type', CHANNEL_TYPE.EMAIL);
+                    setValue('config.provider', 'google');
+                    if (inboxAddressConfig) setValue('config.inbox_address', inboxAddressConfig);
+                    setIsAuthorized(true);
+                    showSuccessToast('Авторизация через Google успешна');
+                    clearErrors();
+                } else {
+                    showErrorToast('Токены авторизации не найдены в cookies');
+                    setIsAuthorized(false);
+                }
+            } else if (error) {
+                showErrorToast(
+                    `Ошибка авторизации через Google: ${errorMessage || 'Неизвестная ошибка'}`,
+                );
+                setIsAuthorized(false);
+            }
+        };
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        handleDefault();
+    }, [open, channel, location.search, setValue, clearErrors, defaultValues, reset, trigger]);
+
+    useEffect(() => {
+        if (selectedType !== CHANNEL_TYPE.EMAIL) {
+            setValue('config', undefined);
+            setIsAuthorized(false);
+        }
+    }, [selectedType, setValue]);
+
+    const handleGoogleAuth = async () => {
+        try {
+            const formState: OAuthRequestDTO = {
+                type: CHANNEL_TYPE.EMAIL,
+                name: formValues.name,
+                intentId: formValues.intentId,
+                llmModelId: formValues.llmModelId,
+                archiveTimer: formValues.archiveTimer,
+                config: {
+                    provider: 'google',
+                    inbox_address: (formValues.config as EmailChannelConfig)?.inbox_address,
+                },
+            };
+            await initiateGoogleAuth(formState);
+        } catch (error) {
+            console.error('Failed to initiate Google auth:', error);
+            showErrorToast('Не удалось инициировать авторизацию через Google');
+        }
+    };
+
+    const onSubmit: SubmitHandler<CreateChannelSchema> = async (data) => {
+        try {
+            const accessToken = Cookies.get('oauthAccess');
+            const refreshToken = Cookies.get('oauthRefresh');
+            let payload = {
+                ...data,
+                intentId: data.intentId === 'auto' ? null : data.intentId,
+                llmModelId: organizationInfo?.allowedModelSelect
+                    ? data.llmModelId
+                    : organizationInfo?.primaryModel,
+                config: data.config,
+            };
+
+            if (
+                payload.type === CHANNEL_TYPE.EMAIL &&
+                (payload?.config as { provider?: string })?.provider === 'google'
+            ) {
+                if (!accessToken || !refreshToken) {
+                    showErrorToast('Токены авторизации не найдены');
+                    return;
+                }
+                payload = {
+                    ...data,
+                    intentId: data.intentId === 'auto' ? null : data.intentId,
+                    llmModelId: organizationInfo?.allowedModelSelect
+                        ? data.llmModelId
+                        : organizationInfo?.primaryModel,
+                    config: {
+                        provider: 'google',
+                        inbox_address: (data.config as EmailChannelConfig)?.inbox_address,
+                        imap_host: DefaultGoogleParams.IMAP_HOST,
+                        imap_port: DefaultGoogleParams.IMAP_PORT,
+                        smtp_host: DefaultGoogleParams.SMTP_HOST,
+                        smtp_port: DefaultGoogleParams.SMTP_PORT,
+                        oauth: {
+                            access_token: accessToken,
+                            refresh_token: refreshToken,
+                        },
+                    },
+                };
+            }
+
+            if (channel) {
+                await updateChannel({ id: channel.id, ...payload }).unwrap();
+                showSuccessToast('Канал связи обновлён');
+            } else {
+                await createChannel(payload).unwrap();
+                showSuccessToast('Канал связи создан');
+            }
+
+            Cookies.remove('oauthAccess');
+            Cookies.remove('oauthRefresh');
+            onClose();
+            reset();
+            setIsAuthorized(false);
+        } catch (error) {
+            console.error(error);
+            if (isFetchBaseQueryError(error) && Number(error.status) === 409) {
+                showErrorToast(
+                    `Не удалось ${channel ? 'обновить' : 'создать'} канал связи, токен занят`,
+                );
+            } else {
+                showErrorToast(`Не удалось ${channel ? 'обновить' : 'создать'} канал связи`);
+            }
+        }
+    };
+
+    const handleCancel = () => {
+        Cookies.remove('oauthAccess');
+        Cookies.remove('oauthRefresh');
+        onClose();
+        reset();
+        setIsAuthorized(false);
+    };
+
+    const isFormLoading = isCreateChannelLoading || isUpdateChannelLoading;
+    const isSubmitButtonDisabled =
+        isFormLoading ||
+        (selectedProvider === 'google' && !isAuthorized) ||
+        !Object.keys(formState.dirtyFields).length;
+
+    useEffect(() => {
+        if (!channel) {
+            reset(defaultValues);
+            setIsAuthorized(false);
+        }
+    }, [defaultValues, reset, channel, open]);
+
+    return (
+        <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleCancel()}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>
+                        {channel ? 'Изменение параметров канала связи' : 'Создание канала связи'}
+                    </DialogTitle>
+                </DialogHeader>
+                <Form {...form}>
+                    <form onSubmit={handleSubmit(onSubmit)}>
+                        <div className="flex flex-col gap-4">
+                            <ControlledSingleSelect
+                                control={control}
+                                name="type"
+                                options={CHANNEL_TYPE_OPTIONS}
+                                label="Тип"
+                                disabled={isFormLoading}
+                                placeholder="Выберите тип канала связи"
+                            />
+                            <ControlledInput
+                                control={control}
+                                name="name"
+                                label="Имя"
+                                disabled={isFormLoading}
+                                placeholder="Введите имя канала"
+                            />
+                            <ControlledSingleSelect
+                                control={control}
+                                name="intentId"
+                                label="Выбор категории"
+                                disabled={isFormLoading}
+                                options={intentsOptions}
+                            />
+                            {organizationInfo?.allowedModelSelect && (
+                                <ControlledSingleSelect
+                                    control={control}
+                                    name="llmModelId"
+                                    label="ИИ модель"
+                                    disabled={isFormLoading}
+                                    options={llmModelsOptions}
+                                    placeholder="Выберите ИИ модель"
+                                />
+                            )}
+                            {selectedType === CHANNEL_TYPE.TELEPHONY_WEBRTC_DEMO && (
+                                <ControlledInput
+                                    control={control}
+                                    name="config.code"
+                                    label="Код канала"
+                                    disabled={isFormLoading}
+                                    placeholder="Введите код канала"
+                                />
+                            )}
+                            {(selectedType === CHANNEL_TYPE.TELEGRAM ||
+                                selectedType === CHANNEL_TYPE.MAX) && (
+                                <ControlledInput
+                                    control={control}
+                                    name="config.token"
+                                    label="Токен"
+                                    disabled={isFormLoading}
+                                    placeholder="Вставьте токен"
+                                />
+                            )}
+                            {selectedType === CHANNEL_TYPE.EMAIL && (
+                                <>
+                                    <ControlledSingleSelect
+                                        control={control}
+                                        name="config.provider"
+                                        label="Провайдер"
+                                        disabled={isFormLoading}
+                                        placeholder="Выберите провайдера"
+                                        options={EMAIL_CHANNEL_PROVIDER_OPTIONS}
+                                    />
+                                    {selectedProvider === 'custom' && (
+                                        <>
+                                            <ControlledInput
+                                                control={control}
+                                                name="config.inbox_address"
+                                                label="Адрес почтового ящика"
+                                                placeholder="Введите адрес почтового ящика"
+                                                disabled={isFormLoading}
+                                            />
+                                            <ControlledInput
+                                                control={control}
+                                                name="config.inbox_app_password"
+                                                type="password"
+                                                label="Пароль приложения"
+                                                placeholder="Введите пароль приложения"
+                                                disabled={isFormLoading}
+                                            />
+                                            <div className="flex flex-col gap-2">
+                                                <Typography
+                                                    variant="body"
+                                                    className="!font-medium !text-sm"
+                                                >
+                                                    Входящие (IMAP)
+                                                </Typography>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <ControlledInput
+                                                        control={control}
+                                                        name="config.imap_host"
+                                                        placeholder="Введите host"
+                                                        disabled={isFormLoading}
+                                                    />
+                                                    <ControlledInput
+                                                        control={control}
+                                                        name="config.imap_port"
+                                                        placeholder="Введите port"
+                                                        type="number"
+                                                        disabled={isFormLoading}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <Typography
+                                                    variant="body"
+                                                    className="!font-medium !text-sm"
+                                                >
+                                                    Исходящие (SMTP)
+                                                </Typography>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <ControlledInput
+                                                        control={control}
+                                                        name="config.smtp_host"
+                                                        placeholder="Введите host"
+                                                        disabled={isFormLoading}
+                                                    />
+                                                    <ControlledInput
+                                                        control={control}
+                                                        name="config.smtp_port"
+                                                        placeholder="Введите port"
+                                                        type="number"
+                                                        disabled={isFormLoading}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                    {selectedProvider === 'google' && (
+                                        <>
+                                            <ControlledInput
+                                                control={control}
+                                                name="config.inbox_address"
+                                                label="Адрес почтового ящика"
+                                                placeholder="example@gmail.com"
+                                                disabled={isFormLoading}
+                                            />
+                                            <Button
+                                                type="button"
+                                                onClick={handleGoogleAuth}
+                                                disabled={isFormLoading || isInitiateLoading}
+                                                className="max-w-[200px] mt-2"
+                                            >
+                                                {isInitiateLoading
+                                                    ? 'Инициализация...'
+                                                    : isAuthorized
+                                                    ? 'Переавторизовать'
+                                                    : 'Авторизовать'}
+                                            </Button>
+                                            {isAuthorized && (
+                                                <Typography
+                                                    variant="body"
+                                                    className="mt-2 text-green-600"
+                                                >
+                                                    Авторизация успешна
+                                                </Typography>
+                                            )}
+                                        </>
+                                    )}
+                                </>
+                            )}
+                            <ControlledTimeInput
+                                control={control}
+                                name="archiveTimer"
+                                label="Таймер архивации сообщений"
+                                disabled={isFormLoading}
+                                isEditMode={!channel}
+                            />
+                        </div>
+                    </form>
+                </Form>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button
+                            onClick={handleCancel}
+                            disabled={isFormLoading}
+                            loading={isFormLoading}
+                            variant="outline"
+                            className="w-26"
+                        >
+                            Отменить
+                        </Button>
+                    </DialogClose>
+                    <Button
+                        onClick={handleSubmit(onSubmit)}
+                        disabled={isSubmitButtonDisabled}
+                        loading={isUpdateChannelLoading || isCreateChannelLoading}
+                        className="w-26"
+                    >
+                        {channel ? 'Изменить' : 'Создать'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { google } from 'googleapis';
+import { OAuthLoginDto } from '../dto/oauth.request.dto';
+
+@Injectable()
+export class ChannelEmailOAuthService {
+  constructor(private readonly configService: ConfigService) {}
+  private readonly logger = new Logger(ChannelEmailOAuthService.name);
+  private readonly REQUIRED_SCOPES = ['https://mail.google.com/'];
+
+  private readonly CLIENT_SECRET = this.configService.get<string>('GOOGLE_CLIENT_SECRET');
+  private readonly CLIENT_ID = this.configService.get<string>('GOOGLE_CLIENT_ID');
+  private readonly REDIRECT_URI = this.configService.get<string>('GOOGLE_REDIRECT_URI');
+
+  async handleLogin(body: OAuthLoginDto) {
+    try {
+      const oauth2Client = new google.auth.OAuth2(this.CLIENT_ID, this.CLIENT_SECRET, this.REDIRECT_URI);
+
+      const url = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: this.REQUIRED_SCOPES,
+        prompt: 'consent',
+        redirect_uri: this.configService.get('GOOGLE_REDIRECT_URI'),
+        ...(body && { state: JSON.stringify(body) }),
+      });
+      return url;
+    } catch (error) {
+      this.logger.error({ msg: 'Error email oauth failed' }, { context: error });
+      throw new BadRequestException({ message: 'OAuth failed, please check provided credentials', error: error });
+    }
+  }
+
+  async handleCallback(code: string, state?: string) {
+    try {
+      const oauth2Client = new google.auth.OAuth2(this.CLIENT_ID, this.CLIENT_SECRET, this.REDIRECT_URI);
+      const parsedState = state && JSON.parse(state);
+      const { tokens } = await oauth2Client.getToken(code);
+
+      if (!tokens.refresh_token) {
+        throw new BadRequestException('No refresh token received');
+      }
+      return {
+        success: true,
+        tokens: {
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token,
+        },
+        ...(parsedState && { state: parsedState }),
+      };
+    } catch (error) {
+      this.logger.error({ msg: 'Error email oauth callback failed' }, { context: error });
+      throw error;
+    }
+  }
+}
+
+
+import { Controller, Post, Get, Res, Logger, UseGuards, Req, Body } from '@nestjs/common';
+import { Request, Response } from 'express';
+import { ChannelEmailOAuthService } from './oauth/channel-email-oauth.service';
+import { ConfigService } from '@nestjs/config';
+import { ZitadelAccessTokenGuard } from 'src/auth/guards/zitadel.token.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { OAuthLoginDto } from './dto/oauth.request.dto';
+
+@Controller('email/google')
+export class EmailOAuthController {
+  constructor(
+    private readonly channelEmailOAuthService: ChannelEmailOAuthService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  private readonly logger = new Logger(EmailOAuthController.name);
+  private readonly FRONTEND_URL = `${this.configService.get<string>('FRONTEND_URL')}/settings/channels`;
+
+  @Post('login')
+  @UseGuards(ZitadelAccessTokenGuard)
+  @ApiBearerAuth()
+  async initiateGoogleAuth(@Body() body: OAuthLoginDto, @Res() res: Response) {
+    const url = await this.channelEmailOAuthService.handleLogin(body);
+    return res.json({ authUrl: url });
+  }
+
+  @Get('callback')
+  async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
+    const query = req.query as any;
+
+    if (query.error) {
+      const errorMessage = query.error_description || 'OAuth authorization failed';
+      this.logger.warn(`Google OAuth error: ${query.error} - ${errorMessage}`);
+      return res.redirect(`${this.FRONTEND_URL}?error=${query.error}&message=${encodeURIComponent(errorMessage)}`);
+    }
+
+    const code = query.code as string;
+    const state = query.state as string | undefined;
+
+    if (!code) {
+      this.logger.error({ msg: 'Missing code in callback' }, { code: code });
+      return res.redirect(`${this.FRONTEND_URL}?error=invalid_request&message=Missing authorization code`);
+    }
+
+    if (typeof code !== 'string' || code.trim() === '') {
+      this.logger.warn('Invalid code format');
+      return res.redirect(`${this.FRONTEND_URL}?error=invalid_params&message=Invalid code format`);
+    }
+
+    try {
+      const result = await this.channelEmailOAuthService.handleCallback(code, state);
+
+      if (result.success) {
+        const cookieOptions = {
+          secure: this.configService.get('NODE_ENV') === 'production',
+          sameSite: 'strict' as const,
+          maxAge: 3600000,
+        } as const;
+
+        res.cookie('oauthAccess', result.tokens.accessToken, cookieOptions);
+        res.cookie('oauthRefresh', result.tokens.refreshToken, cookieOptions);
+
+        const redirectUrl = new URL(this.FRONTEND_URL);
+        redirectUrl.searchParams.append('redirect', 'oauth_success');
+        redirectUrl.searchParams.append('provider', 'google');
+
+        if (result.state) {
+          if (result.state.name) redirectUrl.searchParams.append('form_name', result.state.name);
+          if (result.state.type) redirectUrl.searchParams.append('form_type', result.state.type);
+          if (result.state.intentId) redirectUrl.searchParams.append('form_intentId', result.state.intentId);
+          if (result.state.llmModelId) redirectUrl.searchParams.append('form_llmModelId', result.state.llmModelId);
+          if (result.state.archiveTimer)
+            redirectUrl.searchParams.append('form_archiveTimer', result.state.archiveTimer.toString());
+          if (result.state.config?.provider)
+            redirectUrl.searchParams.append('form_config_provider', result.state.config.provider);
+          if (result.state.config?.inbox_address)
+            redirectUrl.searchParams.append('form_config_inbox_address', result.state.config.inbox_address);
+          if (result.state.piiDocumentUrl)
+            redirectUrl.searchParams.append('form_piiDocumentUrl', result.state.piiDocumentUrl);
+        }
+
+        this.logger.log('Redirecting with URL:', redirectUrl.toString());
+        return res.redirect(redirectUrl.toString());
+      }
+    } catch (error) {
+      this.logger.error('Callback processing error:', error);
+      const errorMessage = error.message || 'Callback processing failed';
+      return res.redirect(`${this.FRONTEND_URL}?error=callback_failed&message=${encodeURIComponent(errorMessage)}`);
+    }
+  }
+}

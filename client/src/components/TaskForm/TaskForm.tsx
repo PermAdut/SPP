@@ -3,6 +3,8 @@ import type { ITask } from "../../api/task.api";
 import { uploadTaskFiles } from "../../api/task.api";
 import { getUserIdFromToken } from "../../utils/jwt.util";
 import styles from "./TaskForm.module.css";
+import { client } from "../../graphql/apollo-client";
+import { GET_TASKS } from "../../graphql/queries/tasks";
 
 interface TaskFormProps {
   task?: ITask;
@@ -142,13 +144,19 @@ function TaskForm({ task, onSubmit, onCancel, isModal = true }: TaskFormProps) {
           files: allFiles,
           responsiblePhone: responsiblePhone.trim() || null,
         });
+
+        // Обновляем кэш GraphQL после загрузки файлов
+        if (files.length > 0) {
+          await client.refetchQueries({
+            include: [GET_TASKS],
+          });
+        }
       } else {
         await onSubmit({
           title: title.trim(),
           description: description.trim(),
           isPublic,
           userId: isPublic ? null : userId || 1,
-          completed: false,
           priority,
           deadline: deadline ? new Date(deadline).toISOString() : null,
           category: category.trim() || "Общее",

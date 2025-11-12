@@ -6,7 +6,7 @@ const testTasks: ITask[] = [
     id: 1,
     title: 'Публичная задача 1',
     description: 'Это пример публичной задачи, видимой всем пользователям',
-    userId: null,
+    userId: 2,
     isPublic: true,
     completed: false,
     createdAt: new Date(),
@@ -14,6 +14,8 @@ const testTasks: ITask[] = [
     deadline: null,
     category: 'Общее',
     tags: [],
+    files: [],
+    responsiblePhone: '+375291234567',
   },
   {
     id: 2,
@@ -27,6 +29,8 @@ const testTasks: ITask[] = [
     deadline: null,
     category: 'Личное',
     tags: [],
+    files: [],
+    responsiblePhone: null,
   },
 ]
 
@@ -89,4 +93,3 @@ class TaskDatabase {
 
 const taskDatabaseInstance = new TaskDatabase()
 export default taskDatabaseInstance
-

@@ -1,7 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import { type ITask, type SocketResponse } from "../../api/task.api";
-import socketService from "../../services/socket.service";
+import { type ITask } from "../../api/task.api";
+import { client } from "../../graphql/apollo-client";
+import {
+  GET_TASKS,
+  CREATE_TASK,
+  UPDATE_TASK,
+  DELETE_TASK,
+  TOGGLE_TASK_COMPLETE,
+} from "../../graphql/queries/tasks";
 
 interface TaskState {
   isLoading: boolean;
@@ -52,208 +59,108 @@ export const {
   removeTask,
 } = taskSlice.actions;
 
-export const getAllTasks = () => (dispatch: any) => {
-  const socket = socketService.getSocket();
-  if (!socket) {
-    dispatch(setError("Socket not connected"));
-    return;
-  }
-
+export const getAllTasks = () => async (dispatch: any) => {
   dispatch(setLoading(true));
-  socket.emit("tasks:getAll");
-
-  socket.once("tasks:getAll:response", (response: SocketResponse<ITask[]>) => {
-    dispatch(setLoading(false));
-    if (response.success && response.data) {
-      dispatch(setTasks(response.data));
+  try {
+    console.log("Fetching tasks...");
+    const { data } = await client.query<{ tasks: ITask[] }>({
+      query: GET_TASKS,
+      fetchPolicy: "network-only",
+    });
+    console.log("GraphQL response:", { data });
+    if (data?.tasks) {
+      dispatch(setTasks(data.tasks));
+      console.log("Tasks loaded:", data.tasks.length);
     } else {
-      dispatch(setError(response.error || "Failed to fetch tasks"));
+      console.log("No tasks data received");
     }
-  });
+  } catch (error: any) {
+    console.error("Error fetching tasks:", error);
+    dispatch(setError(error.message || "Failed to fetch tasks"));
+  } finally {
+    dispatch(setLoading(false));
+  }
 };
 
 export const createTask =
-  (taskData: Partial<Omit<ITask, "id" | "createdAt">>) => (dispatch: any) => {
-    const socket = socketService.getSocket();
-    if (!socket) {
-      const error = "Socket not connected";
-      dispatch(setError(error));
-      return Promise.reject(new Error(error));
-    }
-
+  (taskData: Partial<Omit<ITask, "id" | "createdAt">>) =>
+  async (dispatch: any) => {
     dispatch(setLoading(true));
-    socket.emit("tasks:create", taskData);
-
-    return new Promise<void>((resolve, reject) => {
-      socket.once(
-        "tasks:create:response",
-        (response: SocketResponse<ITask[]>) => {
-          dispatch(setLoading(false));
-          if (response.success && response.data) {
-            dispatch(setTasks(response.data));
-            resolve();
-          } else {
-            const error = response.error || "Failed to create task";
-            dispatch(setError(error));
-            reject(new Error(error));
-          }
-        }
-      );
-
-      socket.once("tasks:update", (tasks: ITask[]) => {
-        dispatch(setTasks(tasks));
+    try {
+      // Убеждаемся, что поле files всегда присутствует
+      const inputData = {
+        ...taskData,
+        files: taskData.files || [],
+      };
+      const { data } = await client.mutate<{ createTask: ITask[] }>({
+        mutation: CREATE_TASK,
+        variables: { input: inputData },
       });
-    });
+      if (data?.createTask) {
+        dispatch(setTasks(data.createTask));
+      }
+    } catch (error: any) {
+      dispatch(setError(error.message || "Failed to create task"));
+      throw error;
+    } finally {
+      dispatch(setLoading(false));
+    }
   };
 
 export const updateTaskAction =
   (id: number, updates: Partial<Omit<ITask, "id" | "createdAt">>) =>
-  (dispatch: any) => {
-    const socket = socketService.getSocket();
-    if (!socket) {
-      const error = "Socket not connected";
-      dispatch(setError(error));
-      return Promise.reject(new Error(error));
-    }
-
+  async (dispatch: any) => {
     dispatch(setLoading(true));
-    socket.emit("tasks:update", { id, updates });
-
-    return new Promise<void>((resolve, reject) => {
-      let isResolved = false;
-      const timeout = setTimeout(() => {
-        if (!isResolved) {
-          isResolved = true;
-          socket.off("tasks:update:response", responseHandler);
-          socket.off("tasks:update", updateHandler);
-          dispatch(setLoading(false));
-          resolve();
-        }
-      }, 5000);
-
-      const responseHandler = (response: SocketResponse<ITask[]>) => {
-        if (isResolved) return;
-        isResolved = true;
-        clearTimeout(timeout);
-        socket.off("tasks:update:response", responseHandler);
-        socket.off("tasks:update", updateHandler);
-
-        dispatch(setLoading(false));
-        if (response.success && response.data) {
-          dispatch(setTasks(response.data));
-          resolve();
-        } else {
-          const error = response.error || "Failed to update task";
-          dispatch(setError(error));
-          reject(new Error(error));
-        }
-      };
-
-      const updateHandler = (tasks: ITask[]) => {
-        dispatch(setTasks(tasks));
-      };
-
-      socket.once("tasks:update:response", responseHandler);
-      socket.once("tasks:update", updateHandler);
-    });
-  };
-
-export const deleteTask = (id: number) => (dispatch: any) => {
-  const socket = socketService.getSocket();
-  if (!socket) {
-    const error = "Socket not connected";
-    dispatch(setError(error));
-    return Promise.reject(new Error(error));
-  }
-
-  dispatch(setLoading(true));
-  socket.emit("tasks:delete", id);
-
-  return new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      dispatch(setLoading(false));
-      dispatch(getAllTasks());
-      socket.off("tasks:delete:response", responseHandler);
-      resolve();
-    }, 1500);
-
-    const responseHandler = (response: SocketResponse<void>) => {
-      clearTimeout(timeout);
-      socket.off("tasks:delete:response", responseHandler);
-
-      if (response.success) {
-        setTimeout(() => {
-          dispatch(getAllTasks());
-          dispatch(setLoading(false));
-        }, 100);
-        resolve();
-      } else {
-        dispatch(setLoading(false));
-        const error = response.error || "Failed to delete task";
-        dispatch(setError(error));
-        reject(new Error(error));
-      }
-    };
-
-    socket.once("tasks:delete:response", responseHandler);
-  });
-};
-
-export const toggleTaskComplete = (id: number) => (dispatch: any) => {
-  const socket = socketService.getSocket();
-  if (!socket) {
-    dispatch(setError("Socket not connected"));
-    return Promise.reject("Socket not connected");
-  }
-
-  socket.emit("tasks:toggleComplete", id);
-
-  socket.once(
-    "tasks:toggleComplete:response",
-    (response: SocketResponse<ITask[]>) => {
-      if (response.success && response.data) {
-        dispatch(setTasks(response.data));
-      } else {
-        dispatch(setError(response.error || "Failed to toggle task"));
-      }
-    }
-  );
-
-  socket.once("tasks:update", (tasks: ITask[]) => {
-    dispatch(setTasks(tasks));
-  });
-};
-
-export const updateTaskFiles =
-  (taskId: number, files: string[]) => (dispatch: any) => {
-    const socket = socketService.getSocket();
-    if (!socket) {
-      dispatch(setError("Socket not connected"));
-      return Promise.reject("Socket not connected");
-    }
-
-    dispatch(setLoading(true));
-    socket.emit("tasks:updateFiles", { taskId, files });
-
-    return new Promise<void>((resolve, reject) => {
-      socket.once(
-        "tasks:updateFiles:response",
-        (response: SocketResponse<ITask[]>) => {
-          dispatch(setLoading(false));
-          if (response.success && response.data) {
-            dispatch(setTasks(response.data));
-            resolve();
-          } else {
-            dispatch(setError(response.error || "Failed to update task files"));
-            reject(new Error(response.error));
-          }
-        }
-      );
-
-      socket.once("tasks:update", (tasks: ITask[]) => {
-        dispatch(setTasks(tasks));
+    try {
+      const { data } = await client.mutate<{ updateTask: ITask[] }>({
+        mutation: UPDATE_TASK,
+        variables: { id, input: updates },
       });
-    });
+      if (data?.updateTask) {
+        dispatch(setTasks(data.updateTask));
+      }
+    } catch (error: any) {
+      dispatch(setError(error.message || "Failed to update task"));
+      throw error;
+    } finally {
+      dispatch(setLoading(false));
+    }
   };
+
+export const deleteTask = (id: number) => async (dispatch: any) => {
+  dispatch(setLoading(true));
+  try {
+    await client.mutate({
+      mutation: DELETE_TASK,
+      variables: { id },
+    });
+    // После удаления обновляем список задач
+    const { data } = await client.query<{ tasks: ITask[] }>({
+      query: GET_TASKS,
+      fetchPolicy: "network-only",
+    });
+    dispatch(setTasks(data?.tasks || []));
+  } catch (error: any) {
+    dispatch(setError(error.message || "Failed to delete task"));
+    throw error;
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
+export const toggleTaskComplete = (id: number) => async (dispatch: any) => {
+  try {
+    const { data } = await client.mutate<{ toggleTaskComplete: ITask[] }>({
+      mutation: TOGGLE_TASK_COMPLETE,
+      variables: { id },
+    });
+    if (data?.toggleTaskComplete) {
+      dispatch(setTasks(data.toggleTaskComplete));
+    }
+  } catch (error: any) {
+    dispatch(setError(error.message || "Failed to toggle task"));
+    throw error;
+  }
+};
 
 export default taskSlice.reducer;

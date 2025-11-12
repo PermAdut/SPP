@@ -4,17 +4,13 @@ import { store } from "./store/store";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router";
 import LoginPage from "./components/LoginPage/LoginPage";
 import TaskList from "./components/TaskList/TaskList";
-import socketService from "./services/socket.service";
 import ProtectedRoute from "./ui/ProtectedRoute/ProtectedRoute";
+import { initializeAuth } from "./store/slices/authSlice";
 
 function App() {
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
-      socketService.connect(token);
-    } else {
-      socketService.connect();
-    }
+    console.log("Initializing app, checking authentication...");
+    store.dispatch(initializeAuth());
   }, []);
 
   return (

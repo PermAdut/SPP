@@ -1,60 +1,28 @@
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../hooks/redux";
-import {
-  getAllTasks,
-  createTask,
-  setTasks,
-} from "../../store/slices/taskSlice";
+import { getAllTasks, createTask } from "../../store/slices/taskSlice";
 import type { ITask } from "../../api/task.api";
 import TaskItem from "../TaskItem/TaskItem";
 import TaskForm from "../TaskForm/TaskForm";
 import styles from "./TaskList.module.css";
-import socketService from "../../services/socket.service";
 
 function TaskList() {
   const dispatch = useAppDispatch();
   const { tasks, isLoading } = useAppSelector((state) => state.task);
+  const { isAuth } = useAppSelector((state) => state.auth);
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState<
     "all" | "public" | "private" | "completed"
   >("all");
 
   useEffect(() => {
-    dispatch(getAllTasks());
-
-    const socket = socketService.getSocket();
-    if (socket) {
-      const handleUpdate = (updatedTasks: ITask[]) => {
-        const visibleTasksBefore = tasks.filter((task) => {
-          if (filter === "public") return task.isPublic;
-          if (filter === "private") return !task.isPublic;
-          if (filter === "completed") return task.completed;
-          return true;
-        });
-
-        dispatch(setTasks(updatedTasks));
-
-        const visibleTasksAfter = updatedTasks.filter((task) => {
-          if (filter === "public") return task.isPublic;
-          if (filter === "private") return !task.isPublic;
-          if (filter === "completed") return task.completed;
-          return true;
-        });
-
-        if (
-          visibleTasksAfter.length < visibleTasksBefore.length &&
-          filter !== "all"
-        ) {
-          setFilter("all");
-        }
-      };
-      socket.on("tasks:update", handleUpdate);
-
-      return () => {
-        socket.off("tasks:update", handleUpdate);
-      };
+    if (isAuth) {
+      console.log("User authenticated, loading tasks...");
+      dispatch(getAllTasks());
+    } else {
+      console.log("User not authenticated, skipping task load");
     }
-  }, [dispatch, tasks, filter]);
+  }, [dispatch, isAuth]);
 
   const handleCreateTask = async (
     taskData: Partial<Omit<ITask, "id" | "createdAt">>

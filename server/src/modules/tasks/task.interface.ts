@@ -10,5 +10,7 @@ export interface ITask {
   deadline: Date | null // Дедлайн задачи
   category: string // Категория задачи
   tags: string[] // Теги задачи
+  files: string[] // Файлы задачи
+  responsiblePhone: string | null // Телефон ответственного
 }
 
