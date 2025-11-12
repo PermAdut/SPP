@@ -1,8 +1,8 @@
 export interface ITask {
-  id: number;
+  id: string;
   title: string;
   description: string;
-  userId: number | null;
+  userId: string | null;
   isPublic: boolean;
   completed: boolean;
   createdAt: string;
@@ -10,10 +10,4 @@ export interface ITask {
   deadline: string | null;
   category: string;
   tags: string[];
-}
-
-export interface SocketResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
 }

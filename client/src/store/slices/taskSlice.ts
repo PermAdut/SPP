@@ -1,6 +1,14 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { ITask, SocketResponse } from '../../api/task.api'
-import socketService from '../../services/socket.service'
+import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit'
+import { ITask } from '../../api/task.api'
+import { apolloClient } from '../../apollo/client'
+import {
+  GET_TASKS,
+  CREATE_TASK,
+  UPDATE_TASK,
+  DELETE_TASK,
+  TOGGLE_TASK_COMPLETE,
+  TASKS_UPDATED_SUBSCRIPTION,
+} from '../../graphql/queries'
 
 interface TaskState {
   isLoading: boolean
@@ -36,7 +44,7 @@ const taskSlice = createSlice({
         state.tasks[index] = action.payload
       }
     },
-    removeTask: (state, action: PayloadAction<number>) => {
+    removeTask: (state, action: PayloadAction<string>) => {
       state.tasks = state.tasks.filter((t) => t.id !== action.payload)
     },
   },
@@ -51,148 +59,154 @@ export const {
   removeTask,
 } = taskSlice.actions
 
-export const getAllTasks = () => (dispatch: any) => {
-  const socket = socketService.getSocket()
-  if (!socket) {
-    dispatch(setError('Socket not connected'))
-    return
-  }
+export const getAllTasks = createAsyncThunk('tasks/getAll', async (_, { dispatch }) => {
+  try {
+    dispatch(setLoading(true))
+    const { data } = await apolloClient.query({
+      query: GET_TASKS,
+      fetchPolicy: 'network-only',
+    })
 
-  dispatch(setLoading(true))
-  socket.emit('tasks:getAll')
+    if (data?.tasks) {
+      dispatch(setTasks(data.tasks))
+      dispatch(setLoading(false))
+      return data.tasks
+    }
 
-  socket.once('tasks:getAll:response', (response: SocketResponse<ITask[]>) => {
+    throw new Error('Failed to fetch tasks')
+  } catch (error: any) {
     dispatch(setLoading(false))
-    if (response.success && response.data) {
-      dispatch(setTasks(response.data))
-    } else {
-      dispatch(setError(response.error || 'Failed to fetch tasks'))
-    }
-  })
-}
-
-export const createTask = (taskData: Omit<ITask, 'id' | 'createdAt'>) => (dispatch: any) => {
-  const socket = socketService.getSocket()
-  if (!socket) {
-    const error = 'Socket not connected'
-    dispatch(setError(error))
-    return Promise.reject(new Error(error))
+    const errorMessage = error.message || 'Failed to fetch tasks'
+    dispatch(setError(errorMessage))
+    throw error
   }
+})
 
-  dispatch(setLoading(true))
-  socket.emit('tasks:create', taskData)
+export const createTask = createAsyncThunk(
+  'tasks/create',
+  async (taskData: Omit<ITask, 'id' | 'createdAt'>, { dispatch }) => {
+    try {
+      dispatch(setLoading(true))
+      const { data } = await apolloClient.mutate({
+        mutation: CREATE_TASK,
+        variables: {
+          task: {
+            ...taskData,
+            userId: taskData.userId || null,
+            deadline: taskData.deadline || null,
+          },
+        },
+      })
 
-  return new Promise<void>((resolve, reject) => {
-    socket.once('tasks:create:response', (response: SocketResponse<ITask[]>) => {
-      dispatch(setLoading(false))
-      if (response.success && response.data) {
-        dispatch(setTasks(response.data))
-        resolve()
-      } else {
-        const error = response.error || 'Failed to create task'
-        dispatch(setError(error))
-        reject(new Error(error))
-      }
-    })
-
-    socket.once('tasks:update', (tasks: ITask[]) => {
-      dispatch(setTasks(tasks))
-    })
-  })
-}
-
-export const updateTaskAction = (id: number, updates: Partial<Omit<ITask, 'id' | 'createdAt'>>) => (dispatch: any) => {
-  const socket = socketService.getSocket()
-  if (!socket) {
-    const error = 'Socket not connected'
-    dispatch(setError(error))
-    return Promise.reject(new Error(error))
-  }
-
-  dispatch(setLoading(true))
-  socket.emit('tasks:update', { id, updates })
-
-  return new Promise<void>((resolve, reject) => {
-    socket.once('tasks:update:response', (response: SocketResponse<ITask[]>) => {
-      dispatch(setLoading(false))
-      if (response.success && response.data) {
-        dispatch(setTasks(response.data))
-        resolve()
-      } else {
-        const error = response.error || 'Failed to update task'
-        dispatch(setError(error))
-        reject(new Error(error))
-      }
-    })
-
-    socket.once('tasks:update', (tasks: ITask[]) => {
-      dispatch(setTasks(tasks))
-    })
-  })
-}
-
-export const deleteTask = (id: number) => (dispatch: any) => {
-  const socket = socketService.getSocket()
-  if (!socket) {
-    const error = 'Socket not connected'
-    dispatch(setError(error))
-    return Promise.reject(new Error(error))
-  }
-
-  dispatch(setLoading(true))
-  socket.emit('tasks:delete', id)
-
-  return new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      dispatch(setLoading(false))
-      dispatch(getAllTasks())
-      socket.off('tasks:delete:response', responseHandler)
-      resolve()
-    }, 1500)
-
-    const responseHandler = (response: SocketResponse<void>) => {
-      clearTimeout(timeout)
-      socket.off('tasks:delete:response', responseHandler)
-      
-      if (response.success) {
-        setTimeout(() => {
-          dispatch(getAllTasks())
-          dispatch(setLoading(false))
-        }, 100)
-        resolve()
-      } else {
+      if (data?.createTask) {
+        dispatch(setTasks(data.createTask))
         dispatch(setLoading(false))
-        const error = response.error || 'Failed to delete task'
-        dispatch(setError(error))
-        reject(new Error(error))
+        return data.createTask
       }
+
+      throw new Error('Failed to create task')
+    } catch (error: any) {
+      dispatch(setLoading(false))
+      const errorMessage = error.message || 'Failed to create task'
+      dispatch(setError(errorMessage))
+      throw error
     }
-
-    socket.once('tasks:delete:response', responseHandler)
-  })
-}
-
-export const toggleTaskComplete = (id: number) => (dispatch: any) => {
-  const socket = socketService.getSocket()
-  if (!socket) {
-    dispatch(setError('Socket not connected'))
-    return Promise.reject('Socket not connected')
   }
+)
 
-  socket.emit('tasks:toggleComplete', id)
+export const updateTaskAction = createAsyncThunk(
+  'tasks/update',
+  async ({ id, updates }: { id: string; updates: Partial<Omit<ITask, 'id' | 'createdAt'>> }, { dispatch }) => {
+    try {
+      dispatch(setLoading(true))
+      const { data } = await apolloClient.mutate({
+        mutation: UPDATE_TASK,
+        variables: {
+          task: {
+            id,
+            ...updates,
+            userId: updates.userId !== undefined ? updates.userId : null,
+            deadline: updates.deadline !== undefined ? updates.deadline : null,
+          },
+        },
+      })
 
-  socket.once('tasks:toggleComplete:response', (response: SocketResponse<ITask[]>) => {
-    if (response.success && response.data) {
-      dispatch(setTasks(response.data))
-    } else {
-      dispatch(setError(response.error || 'Failed to toggle task'))
+      if (data?.updateTask) {
+        dispatch(setTasks(data.updateTask))
+        dispatch(setLoading(false))
+        return data.updateTask
+      }
+
+      throw new Error('Failed to update task')
+    } catch (error: any) {
+      dispatch(setLoading(false))
+      const errorMessage = error.message || 'Failed to update task'
+      dispatch(setError(errorMessage))
+      throw error
     }
+  }
+)
+
+export const deleteTask = createAsyncThunk('tasks/delete', async (id: string, { dispatch }) => {
+  try {
+    dispatch(setLoading(true))
+    const { data } = await apolloClient.mutate({
+      mutation: DELETE_TASK,
+      variables: { id },
+    })
+
+    if (data?.deleteTask) {
+      await dispatch(getAllTasks())
+      dispatch(setLoading(false))
+      return id
+    }
+
+    throw new Error('Failed to delete task')
+  } catch (error: any) {
+    dispatch(setLoading(false))
+    const errorMessage = error.message || 'Failed to delete task'
+    dispatch(setError(errorMessage))
+    throw error
+  }
+})
+
+export const toggleTaskComplete = createAsyncThunk('tasks/toggleComplete', async (id: string, { dispatch }) => {
+  try {
+    const { data } = await apolloClient.mutate({
+      mutation: TOGGLE_TASK_COMPLETE,
+      variables: { id },
+    })
+
+    if (data?.toggleTaskComplete) {
+      dispatch(setTasks(data.toggleTaskComplete))
+      return data.toggleTaskComplete
+    }
+
+    throw new Error('Failed to toggle task')
+  } catch (error: any) {
+    const errorMessage = error.message || 'Failed to toggle task'
+    dispatch(setError(errorMessage))
+    throw error
+  }
+})
+
+export const subscribeToTasks = (dispatch: any) => {
+  const subscription = apolloClient.subscribe({
+    query: TASKS_UPDATED_SUBSCRIPTION,
   })
 
-  socket.once('tasks:update', (tasks: ITask[]) => {
-    dispatch(setTasks(tasks))
+  subscription.subscribe({
+    next: ({ data }) => {
+      if (data?.tasksUpdated) {
+        dispatch(setTasks(data.tasksUpdated))
+      }
+    },
+    error: (error) => {
+      console.error('Subscription error:', error)
+    },
   })
+
+  return subscription
 }
 
 export default taskSlice.reducer
-

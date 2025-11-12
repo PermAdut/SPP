@@ -1,4 +1,5 @@
-import socketService from '../services/socket.service'
+import { apolloClient } from '../apollo/client'
+import { LOGIN, REFRESH_TOKEN } from '../graphql/queries'
 
 export interface LoginCredentials {
   username: string
@@ -10,51 +11,47 @@ export interface AuthResponse {
   refreshToken?: string
 }
 
-interface SocketAuthResponse {
-  success: boolean
-  data?: AuthResponse
-  error?: string
-}
-
 class AuthApi {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    return new Promise((resolve, reject) => {
-      const socket = socketService.connect()
-      
-      socket.emit('auth:login', credentials)
-      
-      socket.once('auth:login:response', (response: SocketAuthResponse) => {
-        if (response.success && response.data) {
-          socketService.reconnect(response.data.accessToken).then(() => {
-            resolve(response.data!)
-          }).catch(reject)
-        } else {
-          reject(new Error(response.error || 'Login failed'))
-        }
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: LOGIN,
+        variables: { credentials },
       })
-    })
+
+      if (data?.login) {
+        localStorage.setItem('accessToken', data.login.accessToken)
+        if (data.login.refreshToken) {
+          localStorage.setItem('refreshToken', data.login.refreshToken)
+        }
+        return data.login
+      }
+
+      throw new Error('Login failed')
+    } catch (error: any) {
+      throw new Error(error.message || 'Login failed')
+    }
   }
 
   async refresh(refreshToken: string): Promise<AuthResponse> {
-    return new Promise((resolve, reject) => {
-      const socket = socketService.getSocket()
-      if (!socket) {
-        reject(new Error('Socket not connected'))
-        return
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: REFRESH_TOKEN,
+        variables: { refreshToken },
+      })
+
+      if (data?.refreshToken?.accessToken) {
+        localStorage.setItem('accessToken', data.refreshToken.accessToken)
+        return {
+          accessToken: data.refreshToken.accessToken,
+          refreshToken,
+        }
       }
 
-      socket.emit('auth:refresh', refreshToken)
-      
-      socket.once('auth:refresh:response', (response: SocketAuthResponse) => {
-        if (response.success && response.data) {
-          socketService.reconnect(response.data.accessToken).then(() => {
-            resolve(response.data!)
-          }).catch(reject)
-        } else {
-          reject(new Error(response.error || 'Refresh failed'))
-        }
-      })
-    })
+      throw new Error('Refresh failed')
+    } catch (error: any) {
+      throw new Error(error.message || 'Refresh failed')
+    }
   }
 }
 

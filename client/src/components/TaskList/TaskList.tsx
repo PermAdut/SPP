@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../hooks/redux";
-import { getAllTasks, createTask, setTasks } from "../../store/slices/taskSlice";
+import { getAllTasks, createTask, subscribeToTasks } from "../../store/slices/taskSlice";
 import { ITask } from "../../api/task.api";
 import TaskItem from "../TaskItem/TaskItem";
 import TaskForm from "../TaskForm/TaskForm";
 import styles from "./TaskList.module.css";
-import socketService from "../../services/socket.service";
 
 function TaskList() {
   const dispatch = useAppDispatch();
@@ -16,17 +15,11 @@ function TaskList() {
   useEffect(() => {
     dispatch(getAllTasks());
     
-    const socket = socketService.getSocket();
-    if (socket) {
-      const handleUpdate = (tasks: ITask[]) => {
-        dispatch(setTasks(tasks));
-      };
-      socket.on('tasks:update', handleUpdate);
-      
-      return () => {
-        socket.off('tasks:update', handleUpdate);
-      };
-    }
+    const subscription = subscribeToTasks(dispatch);
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [dispatch]);
 
   const handleCreateTask = async (taskData: Omit<ITask, "id" | "createdAt">) => {
